@@ -16,7 +16,7 @@ export default class DataIngesterService extends Service {
 				new: {
                     params: {
                         name: "string",
-                        description: "string"
+                        description: "string",
                     },
 					rest: {
 						method: "POST",
