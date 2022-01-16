@@ -1,8 +1,12 @@
 "use strict";
 
 import {Service, ServiceBroker, Context} from "moleculer";
+import Connection from "../../mixins/db.mixin";
 
 export default class DataIngesterService extends Service {
+    private DBConnection = new Connection('recepies').start();
+
+    // TODO: Add collection fields and validators
 
 	public constructor(public broker: ServiceBroker) {
 		super(broker);
