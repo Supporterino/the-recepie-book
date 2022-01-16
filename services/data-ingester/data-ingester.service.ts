@@ -4,7 +4,7 @@ import {Service, ServiceBroker, Context, ServiceSchema} from "moleculer";
 import Connection from "../../mixins/db.mixin";
 
 export default class DataIngesterService extends Service {
-    private DBConnection = new Connection('recepies').start();
+    private DBConnection = new Connection("recepies").start();
 
     // TODO: Adjust collection fields and validators to production values
 
@@ -22,7 +22,7 @@ export default class DataIngesterService extends Service {
                 "ingredients",
                 "steps",
                 "rating",
-                "owner"
+                "owner",
             ],
 			actions:{
 				/**
@@ -36,7 +36,7 @@ export default class DataIngesterService extends Service {
                         ingredients: "string",
                         steps: "string",
                         rating: {type: "number", positive: true},
-                        owner: "string"
+                        owner: "string",
                     },
 					rest: {
 						method: "POST",
@@ -53,7 +53,7 @@ export default class DataIngesterService extends Service {
 	// Action
 	public SaveNewRecepie(params: any): string {
         // TODO: Trigger indexing
-        this.broker.call('v1.data-ingester.create', params)
+        this.broker.call("v1.data-ingester.create", params);
 		return `Saved '${params.name}' by ${params.owner}`;
 	}
 }
