@@ -24,7 +24,7 @@ export default class DataIngesterService extends Service {
 						path: "/new",
 					},
 					async handler(ctx): Promise<string> {
-						return this.ActionHello();
+						return this.SaveNewRecepie(ctx.params.name, ctx.params.description);
 					},
 				},
 			},
@@ -32,7 +32,7 @@ export default class DataIngesterService extends Service {
 	}
 
 	// Action
-	public ActionHello(): string {
-		return "Hello Moleculer";
+	public SaveNewRecepie(name: string, description: string): string {
+		return `Trying to save new recepie with name: ${name} and description: ${description}`;
 	}
 }
