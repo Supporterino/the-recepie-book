@@ -1,6 +1,6 @@
 "use strict";
 
-import {Service, ServiceBroker, Context} from "moleculer";
+import {Service, ServiceBroker, Context, ServiceSchema} from "moleculer";
 import Connection from "../../mixins/db.mixin";
 
 export default class DataIngesterService extends Service {
@@ -8,12 +8,22 @@ export default class DataIngesterService extends Service {
 
     // TODO: Add collection fields and validators
 
-	public constructor(public broker: ServiceBroker) {
+    // @ts-ignore
+	public constructor(public broker: ServiceBroker, schema: ServiceSchema<{}> = {}) {
 		super(broker);
 		this.parseServiceSchema(Service.mergeSchemas({
 			name: "data-ingester",
             version: 1,
             mixins: [this.DBConnection],
+            fields: [
+                "_id",
+                "name",
+                "description",
+                "ingredients",
+                "steps",
+                "rating",
+                "owner"
+            ],
 			actions:{
 				/**
 				 * Add a new recepie to the storage
@@ -23,21 +33,27 @@ export default class DataIngesterService extends Service {
                     params: {
                         name: "string",
                         description: "string",
+                        ingredients: "string",
+                        steps: "string",
+                        rating: {type: "number", positive: true},
+                        owner: "string"
                     },
 					rest: {
 						method: "POST",
 						path: "/new",
 					},
 					async handler(ctx): Promise<string> {
-						return this.SaveNewRecepie(ctx.params.name, ctx.params.description);
+						return this.SaveNewRecepie(ctx.params);
 					},
 				},
 			},
-		}, this.schema));
+		}, schema));
 	}
 
 	// Action
-	public SaveNewRecepie(name: string, description: string): string {
-		return `Trying to save new recepie with name: ${name} and description: ${description}`;
+	public SaveNewRecepie(params: any): string {
+        // TODO: Trigger indexing
+        this.broker.call('v1.data-ingester.create', params)
+		return `Trying to save new recepie with name: ${params.name} and description: ${params.description}`;
 	}
 }
