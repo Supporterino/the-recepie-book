@@ -8,6 +8,7 @@ export default class GreeterService extends Service {
 		super(broker);
 		this.parseServiceSchema({
 			name: "greeter",
+			version: 1,
 			actions:{
 				/**
 				 * Say a 'Hello' action.
