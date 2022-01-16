@@ -6,7 +6,7 @@ import Connection from "../../mixins/db.mixin";
 export default class DataIngesterService extends Service {
     private DBConnection = new Connection('recepies').start();
 
-    // TODO: Add collection fields and validators
+    // TODO: Adjust collection fields and validators to production values
 
     // @ts-ignore
 	public constructor(public broker: ServiceBroker, schema: ServiceSchema<{}> = {}) {
