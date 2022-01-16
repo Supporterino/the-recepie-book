@@ -54,6 +54,6 @@ export default class DataIngesterService extends Service {
 	public SaveNewRecepie(params: any): string {
         // TODO: Trigger indexing
         this.broker.call('v1.data-ingester.create', params)
-		return `Trying to save new recepie with name: ${params.name} and description: ${params.description}`;
+		return `Saved '${params.name}' by ${params.owner}`;
 	}
 }
