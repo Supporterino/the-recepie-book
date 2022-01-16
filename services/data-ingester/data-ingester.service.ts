@@ -8,6 +8,7 @@ export default class DataIngesterService extends Service {
 		super(broker);
 		this.parseServiceSchema({
 			name: "data-ingester",
+            version: 1,
 			actions:{
 				/**
 				 * Add a new recepie to the storage
