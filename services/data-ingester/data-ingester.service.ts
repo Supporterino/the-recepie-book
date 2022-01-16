@@ -10,9 +10,10 @@ export default class DataIngesterService extends Service {
 
 	public constructor(public broker: ServiceBroker) {
 		super(broker);
-		this.parseServiceSchema({
+		this.parseServiceSchema(Service.mergeSchemas({
 			name: "data-ingester",
             version: 1,
+            mixins: [this.DBConnection],
 			actions:{
 				/**
 				 * Add a new recepie to the storage
@@ -32,7 +33,7 @@ export default class DataIngesterService extends Service {
 					},
 				},
 			},
-		});
+		}, this.schema));
 	}
 
 	// Action
