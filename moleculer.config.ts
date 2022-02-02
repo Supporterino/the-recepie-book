@@ -28,7 +28,7 @@ import {BrokerOptions, Errors, MetricRegistry, ServiceBroker} from "moleculer";
  */
 const brokerConfig: BrokerOptions = {
 	// Namespace of nodes to segment your nodes on the same network.
-	namespace: "the-recepie-book",
+	namespace: "the-recipe-book",
 	// Unique node identifier. Must be unique in a namespace.
 	nodeID: null,
 	// Custom metadata store. Store here what you want. Accessing: `this.broker.metadata`
