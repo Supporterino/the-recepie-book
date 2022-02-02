@@ -19,18 +19,6 @@ services:
     networks:
       - internal
 
-  greeter:
-    build:
-      context: .
-    image: the-recepie-book
-    env_file: docker-compose.env
-    environment:
-      SERVICES: greeter
-    depends_on:
-      - nats
-    networks:
-      - internal
-
   data-ingester:
     build:
       context: .
