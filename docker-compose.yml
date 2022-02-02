@@ -5,7 +5,7 @@ services:
   api:
     build:
       context: .
-    image: the-recepie-book
+    image: the-recipe-book
     env_file: docker-compose.env
     environment:
       SERVICES: api
@@ -22,10 +22,10 @@ services:
   data-ingester:
     build:
       context: .
-    image: the-recepie-book
+    image: the-recipe-book
     env_file: docker-compose.env
     environment:
-      SERVICES: data-ingester
+      SERVICES: data-store
     depends_on:
       - mongo
       - nats
