@@ -27,7 +27,7 @@ export default class DataStoreService extends Service {
 				entityValidator: {
 					name: "string",
 					description: {type: "string", default: "", optional: true},
-					ingredients: {type: "array", items: {type: "object", strict: true, props: {name: "string", amount: "string"}}},
+					ingredients: {type: "array", items: {type: "object", strict: true, props: {name: "string", amount: "number", unit: "string"}}},
 					steps: {type: "array", items: "string"},
 					rating: {type: "number", positive: true, default: 0, optional: true},
 					tags: {type: "array", items: "string"},

@@ -21,7 +21,7 @@ export default class RecipeCreationService extends Service {
 					params: {
 						name: "string",
 						description: {type: "string", optional: true},
-						ingredients: {type: "array", items: {type: "object", strict: true, props: {name: "string", amount: "string"}}},
+						ingredients: {type: "array", items: {type: "object", strict: true, props: {name: "string", amount: "number", unit: "string"}}},
 						steps: {type: "array", items: "string"},
 						rating: {type: "number", optional: true},
 						tags: {type: "array", items: "string"},
