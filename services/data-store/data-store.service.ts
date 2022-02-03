@@ -1,6 +1,6 @@
 "use strict";
 
-import {Service, ServiceBroker, Context, ServiceSchema} from "moleculer";
+import {Service, ServiceBroker, ServiceSchema} from "moleculer";
 import Connection from "../../mixins/db.mixin";
 
 export default class DataStoreService extends Service {
@@ -34,27 +34,6 @@ export default class DataStoreService extends Service {
 					owner: "string",
 				},
 			},
-			actions:{
-				/**
-				 * Add a new recipe to the storage
-				 */
-				new: {
-					rest: {
-						method: "POST",
-						path: "/new",
-					},
-					async handler(ctx): Promise<string> {
-						return await this.SaveNewRecipe(ctx.params);
-					},
-				},
-			},
 		}, schema));
-	}
-
-	// Action
-	public async SaveNewRecipe(params: any): Promise<string> {
-        // TODO: Trigger indexing
-        await this.broker.call("v1.data-store.create", params);
-		return `Saved '${params.name}' by ${params.owner}`;
 	}
 }
