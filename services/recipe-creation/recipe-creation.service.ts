@@ -36,7 +36,16 @@ export default class RecipeCreationService extends Service {
 	}
 
 	public async createRecipe(params: any): Promise<string> {
+		params.tags = await this.parseTagsToID(params.tags)
 		await this.broker.call('v1.data-store.create', params)
 		return `Saved recipe (${params.name}) by ${params.owner}`
+	}
+
+	private async parseTagsToID(tags: string[]): Promise<string[]> {
+		const output: string[] = []
+		for (const tag of tags) {
+			output.push(await this.broker.call("v1.tags.check_for_tag", {name: tag}))
+		}
+		return output
 	}
 }
