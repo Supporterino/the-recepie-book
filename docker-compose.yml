@@ -19,6 +19,19 @@ services:
     networks:
       - internal
 
+  recipe-provider:
+    build:
+      context: .
+    image: the-recipe-book
+    env_file: docker-compose.env
+    environment:
+      SERVICES: recipe-provider
+    depends_on:
+      - mongo
+      - nats
+    networks:
+      - internal
+
   recipe-creation:
     build:
       context: .

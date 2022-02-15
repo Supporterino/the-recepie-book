@@ -13,10 +13,10 @@ export default class RecipeCreationService extends Service {
 				/**
 				 * Receive new recipe and trigger the saving process via the `data-store` service
 				 */
-				create_recipe: {
+				createRecipe: {
 					rest: {
 						method: "POST",
-						path: "/create_recipe",
+						path: "/createRecipe",
 					},
 					params: {
 						name: "string",
@@ -31,21 +31,21 @@ export default class RecipeCreationService extends Service {
 						return await this.createRecipe(ctx.params);
 					},
 				},
-			}
+			},
 		});
 	}
 
 	public async createRecipe(params: any): Promise<string> {
-		params.tags = await this.parseTagsToID(params.tags)
-		await this.broker.call('v1.data-store.create', params)
-		return `Saved recipe (${params.name}) by ${params.owner}`
+		params.tags = await this.parseTagsToID(params.tags);
+		await this.broker.call("v1.data-store.create", params);
+		return `Saved recipe (${params.name}) by ${params.owner}`;
 	}
 
 	private async parseTagsToID(tags: string[]): Promise<string[]> {
-		const output: string[] = []
+		const output: string[] = [];
 		for (const tag of tags) {
-			output.push(await this.broker.call("v1.tags.check_for_tag", {name: tag}))
+			output.push(await this.broker.call("v1.tags.checkForTag", {name: tag}));
 		}
-		return output
+		return output;
 	}
 }
