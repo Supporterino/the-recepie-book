@@ -1,6 +1,7 @@
 "use strict";
 
 import {Service, ServiceBroker} from "moleculer";
+import { Ingredient } from "../../types/ingredient";
 
 export default class RecipeCreationService extends Service {
 
@@ -11,7 +12,15 @@ export default class RecipeCreationService extends Service {
             version: 1,
 			actions:{
 				/**
-				 * Receive new recipe and trigger the saving process via the `data-store` service
+				 * Validates the input and converts the tags to ids and sends a creation request to the `data-store` service
+				 *
+				 * @method
+				 * @param {String} name - The name of the recipe
+				 * @param {String} description - The description for the recipe
+				 * @param {Array<string>} steps - The steps to make the recipe. Each step should be one element of the array
+				 * @param {Array<Ingredient>} ingredients - A list of ingredients needed to make the recipe
+				 * @param {Array<string} tags - A list of tag names to link to the recipe
+				 * @param {String} owner - Name of the recipe owner
 				 */
 				createRecipe: {
 					rest: {
@@ -37,6 +46,7 @@ export default class RecipeCreationService extends Service {
 
 	public async createRecipe(params: any): Promise<string> {
 		params.tags = await this.parseTagsToID(params.tags);
+		this.logger.info(`Creating recipe (${params.name}) by ${params.owner}`)
 		await this.broker.call("v1.data-store.create", params);
 		return `Saved recipe (${params.name}) by ${params.owner}`;
 	}
@@ -44,6 +54,7 @@ export default class RecipeCreationService extends Service {
 	private async parseTagsToID(tags: string[]): Promise<string[]> {
 		const output: string[] = [];
 		for (const tag of tags) {
+			this.logger.debug(`Converting tag (${tag}) to id`)
 			output.push(await this.broker.call("v1.tags.checkForTag", {name: tag}));
 		}
 		return output;

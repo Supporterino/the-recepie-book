@@ -24,6 +24,13 @@ export default class TagsService extends Service {
 				},
 			},
 			actions: {
+				/**
+				 * Returns a list of possible tags containing the provided string
+				 *
+				 * @method
+				 * @param {String} name - The string to search inside the tags table
+				 * @returns {Array<string>} - A list of the matching tags as JSON string
+				 */
 				getByString: {
 					rest: {
 						path: "/getByString",
@@ -36,6 +43,13 @@ export default class TagsService extends Service {
 						return await this.getTagByName(ctx.params.name);
 					},
 				},
+				/**
+				 * Check if a tag exists in the table and return its id if not present creates the tag
+				 *
+				 * @method
+				 * @param {String} name - the name of the tag to check
+				 * @returns {String} - The id of the tag
+				 */
 				checkForTag: {
 					rest: {
 						path: "/checkForTag",
@@ -53,11 +67,13 @@ export default class TagsService extends Service {
 	}
 
 	public async checkTagAndGetID(tagName: string) {
+		this.logger.info(`Checking if ${tagName} exists in the DB.`)
 		const tags = await this.broker.call("v1.tags.find", { query: { name: tagName } }) as Tag[];
 		if (tags.length === 1) {
 			const tag = tags[0];
 			return tag._id;
 		} else if (tags.length === 0) {
+			this.logger.info(`Creating tag: ${tagName}`)
 			const tag = await this.broker.call("v1.tags.create", { name: tagName }) as Tag;
 			return tag._id;
 		} else {

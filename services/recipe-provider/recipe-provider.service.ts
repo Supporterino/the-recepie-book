@@ -11,6 +11,13 @@ export default class RecipeProviderService extends Service {
 			name: "recipe-provider",
             version: 1,
 			actions:{
+				/**
+				 * Returns a recipe by its ID inside the DB
+				 *
+				 * @method
+				 * @param {String} id - The id of the recipe to return
+				 * @returns {Recipe} - The recipe as JSON string
+				 */
 				getById: {
 					rest: {
 						path: "/getById",
@@ -23,6 +30,13 @@ export default class RecipeProviderService extends Service {
 						return await this.getRecipeByID(ctx.params.id);
 					},
 				},
+				/**
+				 * Returns a list of recipes matching the provided string in their title
+				 *
+				 * @method
+				 * @param {String} name - The string to search inside of the recipe titles
+				 * @returns {Array<Recipe>} - A list of matching recipes as JSON string
+				 */
 				getByName: {
 					rest: {
 						path: "/getByName",
@@ -35,6 +49,14 @@ export default class RecipeProviderService extends Service {
 						return await this.getRecipesByName(ctx.params.name);
 					},
 				},
+				/**
+				 * Return a list of recipes matching one or all tags depending on the `intersect` parameter
+				 *
+				 * @method
+				 * @param {Array<string>} tags - A list of tag names to match against the database
+				 * @param {Boolean} intersect - Indicator if all or just one tag needs to be matched
+				 * @returns {Array<Recipe>} - A list of matching recipes as JSON string
+				 */
 				getByTags: {
 					rest: {
 						path: "/getByTags",
