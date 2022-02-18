@@ -67,13 +67,13 @@ export default class TagsService extends Service {
 	}
 
 	public async checkTagAndGetID(tagName: string) {
-		this.logger.info(`Checking if ${tagName} exists in the DB.`)
+		this.logger.info(`Checking if ${tagName} exists in the DB.`);
 		const tags = await this.broker.call("v1.tags.find", { query: { name: tagName } }) as Tag[];
 		if (tags.length === 1) {
 			const tag = tags[0];
 			return tag._id;
 		} else if (tags.length === 0) {
-			this.logger.info(`Creating tag: ${tagName}`)
+			this.logger.info(`Creating tag: ${tagName}`);
 			const tag = await this.broker.call("v1.tags.create", { name: tagName }) as Tag;
 			return tag._id;
 		} else {

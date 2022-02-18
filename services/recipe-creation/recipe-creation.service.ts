@@ -46,7 +46,7 @@ export default class RecipeCreationService extends Service {
 
 	public async createRecipe(params: any): Promise<string> {
 		params.tags = await this.parseTagsToID(params.tags);
-		this.logger.info(`Creating recipe (${params.name}) by ${params.owner}`)
+		this.logger.info(`Creating recipe (${params.name}) by ${params.owner}`);
 		await this.broker.call("v1.data-store.create", params);
 		return `Saved recipe (${params.name}) by ${params.owner}`;
 	}
@@ -54,7 +54,7 @@ export default class RecipeCreationService extends Service {
 	private async parseTagsToID(tags: string[]): Promise<string[]> {
 		const output: string[] = [];
 		for (const tag of tags) {
-			this.logger.debug(`Converting tag (${tag}) to id`)
+			this.logger.debug(`Converting tag (${tag}) to id`);
 			output.push(await this.broker.call("v1.tags.checkForTag", {name: tag}));
 		}
 		return output;
