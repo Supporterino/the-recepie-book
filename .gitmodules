@@ -1,0 +1,3 @@
+[submodule "types"]
+	path = types
+	url = ssh://git@git.roth-kl.de:9022/supporterino/the-recipe-typelibrary.git
