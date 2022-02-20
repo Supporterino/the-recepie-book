@@ -23,6 +23,8 @@ export default class DataStoreService extends Service {
 					"rating",
 					"tags",
 					"owner",
+					"creationTimestamp",
+					"updateTimestamp",
 				],
 				entityValidator: {
 					name: "string",
@@ -32,6 +34,8 @@ export default class DataStoreService extends Service {
 					rating: {type: "number", positive: true, default: 0, optional: true},
 					tags: {type: "array", items: "string"},
 					owner: "string",
+					creationTimestamp: { type: "date", convert: true },
+					updateTimestamp: { type: "date", convert: true },
 				},
 			},
 		}, schema));

@@ -45,7 +45,10 @@ export default class RecipeCreationService extends Service {
 	}
 
 	public async createRecipe(params: any): Promise<string> {
+		const now = new Date();
 		params.tags = await this.parseTagsToID(params.tags);
+		params.creationTimestamp = now;
+		params.updateTimestamp = now;
 		this.logger.info(`Creating recipe (${params.name}) by ${params.owner}`);
 		await this.broker.call("v1.data-store.create", params);
 		return `Saved recipe (${params.name}) by ${params.owner}`;
