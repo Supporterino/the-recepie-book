@@ -53,10 +53,10 @@ export default class RecipeCreationService extends Service {
 		params.updateTimestamp = now;
 		this.logger.info(`Creating recipe (${params.name}) by ${params.owner}`);
 		const recipe = await this.broker.call("v1.data-store.create", params) as Recipe;
-		return <CreationAndUpdateResponse>{
+		return {
 			recipeId: `${recipe._id}`,
-			msg: `Saved recipe (${params.name}) by ${params.owner}`
-		}
+			msg: `Saved recipe (${params.name}) by ${params.owner}`,
+		} as CreationAndUpdateResponse;
 	}
 
 	private async parseTagsToID(tags: string[]): Promise<string[]> {
