@@ -33,7 +33,12 @@ export default class ApiService extends Service {
 					path: "/api",
 					whitelist: [
 						// Access to any actions in all services under "/api" URL
-						"**",
+						"v1.tags.*",
+						"v1.recipe-updater.*",
+						"v1.recipe-provider.*",
+						"v1.recipe-creation.*",
+						"v1.data-store.list",
+						"api.*",
 					],
 					// Route-level Express middlewares. More info: https://moleculer.services/docs/0.14/moleculer-web.html#Middlewares
 					use: [],
