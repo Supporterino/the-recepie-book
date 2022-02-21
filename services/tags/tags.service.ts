@@ -41,7 +41,7 @@ export default class TagsService extends Service {
 					params: {
 						name: {type: "string", min: 2},
 					},
-					async handler(ctx): Promise<string> {
+					async handler(ctx): Promise<Tag[]|FilterError> {
 						return await this.getTagByName(ctx.params.name);
 					},
 				},
@@ -60,7 +60,7 @@ export default class TagsService extends Service {
 					params: {
 						name: {type: "string", min: 2},
 					},
-					async handler(ctx): Promise<string> {
+					async handler(ctx): Promise<string | DatabaseError> {
 						return await this.checkTagAndGetID(ctx.params.name);
 					},
 				},
@@ -68,7 +68,7 @@ export default class TagsService extends Service {
 		}, schema));
 	}
 
-	public async checkTagAndGetID(tagName: string) {
+	public async checkTagAndGetID(tagName: string): Promise<string | DatabaseError> {
 		this.logger.info(`Checking if ${tagName} exists in the DB.`);
 		const tags = await this.broker.call("v1.tags.find", { query: { name: tagName } }) as Tag[];
 		if (tags.length === 1) {
@@ -87,11 +87,9 @@ export default class TagsService extends Service {
 		}
 	}
 
-	public async getTagByName(name: string) {
+	public async getTagByName(name: string): Promise<Tag[] | FilterError> {
 		try {
-			const tags = await this.broker.call("v1.tags.find", { query: { name: { $regex: name, $options: "i" } } }) as Tag[];
-			if (tags.length > 0) {return tags;}
-			else {return `No tags found containing: ${name}`;}
+			return await this.broker.call("v1.tags.find", { query: { name: { $regex: name, $options: "i" } } }) as Tag[];
 		} catch (error) {
 			return {
 				name: "FilterError",
