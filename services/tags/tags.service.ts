@@ -83,7 +83,7 @@ export default class TagsService extends Service {
 
 	public async getTagByName(name: string) {
 		try {
-			const tags = await this.broker.call("v1.tags.find", { query: { name: { $regex: name } } }) as Tag[];
+			const tags = await this.broker.call("v1.tags.find", { query: { name: { $regex: name, $options: 'i' } } }) as Tag[];
 			if (tags.length > 0) {return tags;}
 			else {return `No tags found containing: ${name}`;}
 		} catch (error) {

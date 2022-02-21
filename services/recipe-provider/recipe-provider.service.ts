@@ -127,9 +127,7 @@ export default class RecipeProviderService extends Service {
 	public async getRecipesByRating(rating: number) {
 		this.logger.info(`Returning recipes with rating over ${rating}`);
 		try {
-			const recipes = await this.broker.call("v1.data-store.find", { query: { rating: { $gt: rating } } }) as Recipe[];
-			if (recipes.length > 0) {return recipes;}
-			else {return `No matchfing recipes found with rating > ${rating}`;}
+			return await this.broker.call("v1.data-store.find", { query: { rating: { $gt: rating } } }) as Recipe[];
 		} catch (error) {
 			return `Error during fetching: Error: ${error}.`;
 		}
@@ -152,9 +150,7 @@ export default class RecipeProviderService extends Service {
 	public async getRecipesByName(name: string) {
 		this.logger.info(`Returning recipes with name which includes: ${name}`);
 		try {
-			const recipes = await this.broker.call("v1.data-store.find", { query: { name: { $regex: name } } }) as Recipe[];
-			if (recipes.length > 0) {return recipes;}
-			else {return `No matchfing recipes found with name (${name})`;}
+			return await this.broker.call("v1.data-store.find", { query: { name: { $regex: name, $options: 'i' } } }) as Recipe[];
 		} catch (error) {
 			return `Error during fetching: Error: ${error}.`;
 		}
@@ -171,9 +167,7 @@ export default class RecipeProviderService extends Service {
 
 	private async getByNameAndRating(name: string, rating: number) {
 		try {
-			const recipes = await this.broker.call("v1.data-store.find", { query: { rating: { $gt: rating }, name: { $regex: name } } }) as Recipe[];
-			if (recipes.length > 0) {return recipes;}
-			else {return "No matchfing recipes found";}
+			return await this.broker.call("v1.data-store.find", { query: { rating: { $gt: rating }, name: { $regex: name, $options: 'i' } } }) as Recipe[];
 		} catch (error) {
 			return `Error during fetching: Error: ${error}.`;
 		}
@@ -182,9 +176,7 @@ export default class RecipeProviderService extends Service {
 	private async getByNameAndRatingAndTags(name: string, rating: number, tagNames: string[]) {
 		try {
 			const tagIDs = await this.convertTagsInIDs(tagNames);
-			const recipes = await this.broker.call("v1.data-store.find", { query: { rating: { $gt: rating }, name: { $regex: name }, tags: { $all: tagIDs } } }) as Recipe[];
-			if (recipes.length > 0) {return recipes;}
-			else {return "No matchfing recipes found";}
+			return await this.broker.call("v1.data-store.find", { query: { rating: { $gt: rating }, name: { $regex: name, $options: 'i' }, tags: { $all: tagIDs } } }) as Recipe[];
 		} catch (error) {
 			return `Error during fetching: Error: ${error}.`;
 		}
@@ -193,9 +185,7 @@ export default class RecipeProviderService extends Service {
 	private async getByRatingAndTags(rating: number, tagNames: string[]) {
 		try {
 			const tagIDs = await this.convertTagsInIDs(tagNames);
-			const recipes = await this.broker.call("v1.data-store.find", { query: { rating: { $gt: rating }, tags: { $all: tagIDs } } }) as Recipe[];
-			if (recipes.length > 0) {return recipes;}
-			else {return "No matchfing recipes found";}
+			return await this.broker.call("v1.data-store.find", { query: { rating: { $gt: rating }, tags: { $all: tagIDs } } }) as Recipe[];
 		} catch (error) {
 			return `Error during fetching: Error: ${error}.`;
 		}
@@ -212,7 +202,7 @@ export default class RecipeProviderService extends Service {
 
 	private async getRecipesByTag(tagID: string) {
 		this.logger.debug(`Returning recipes with tag: ${tagID}`);
-		return await this.broker.call("v1.data-store.find", { query: { tags: { $regex: tagID } } }) as Recipe[];
+		return await this.broker.call("v1.data-store.find", { query: { tags: { $regex: tagID, $options: 'i' } } }) as Recipe[];
 	}
 
 	private intersectArray(recipes: Recipe[], tags: string[]): Recipe[] {
