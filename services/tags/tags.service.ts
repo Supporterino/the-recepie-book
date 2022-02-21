@@ -2,6 +2,8 @@
 
 import {Service, ServiceBroker, ServiceSchema} from "moleculer";
 import Connection from "../../mixins/db.mixin";
+import { DatabaseError } from "../../types/database-error";
+import { FilterError } from "../../types/filter-error";
 import { Tag } from "../../types/tag";
 
 export default class TagsService extends Service {
@@ -77,17 +79,25 @@ export default class TagsService extends Service {
 			const tag = await this.broker.call("v1.tags.create", { name: tagName }) as Tag;
 			return tag._id;
 		} else {
-			throw new Error(`Someone fucked the tags database and got '${tagName}' more than once in there.`);
+			return {
+				name: "DatabaseError",
+				message: "The database has a duplicate id which shouldn't be possible. Who fucked up?",
+				database: "tags",
+			} as DatabaseError;
 		}
 	}
 
 	public async getTagByName(name: string) {
 		try {
-			const tags = await this.broker.call("v1.tags.find", { query: { name: { $regex: name, $options: 'i' } } }) as Tag[];
+			const tags = await this.broker.call("v1.tags.find", { query: { name: { $regex: name, $options: "i" } } }) as Tag[];
 			if (tags.length > 0) {return tags;}
 			else {return `No tags found containing: ${name}`;}
 		} catch (error) {
-			return `Error during fetching: Error: ${error}.`;
+			return {
+				name: "FilterError",
+				message: `${error.message}`,
+				filterType: "byName",
+			} as FilterError;
 		}
 	}
 }

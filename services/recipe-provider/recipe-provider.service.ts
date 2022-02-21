@@ -1,6 +1,7 @@
 "use strict";
 
 import { Service, ServiceBroker} from "moleculer";
+import { FilterError } from "../../types/filter-error";
 import { Recipe } from "../../types/recipe";
 import { Tag } from "../../types/tag";
 
@@ -121,7 +122,10 @@ export default class RecipeProviderService extends Service {
 		else if (name !== "" && tags.length > 0) {return await this.getByNameAndRatingAndTags(name, rating, tags);}
 		else if (name === "" && tags.length === 0) {return await this.broker.call("v1.recipe-provider.getByMinRating", { rating });}
 		else if (name === "" && tags.length > 0) {return await this.getByRatingAndTags(rating, tags);}
-		else {return new Error("Invalid filter provided.");}
+		else {return {
+			name: "FilterError",
+			message: "No valid filter provided.",
+		} as FilterError;}
 	}
 
 	public async getRecipesByRating(rating: number) {
@@ -129,7 +133,11 @@ export default class RecipeProviderService extends Service {
 		try {
 			return await this.broker.call("v1.data-store.find", { query: { rating: { $gt: rating } } }) as Recipe[];
 		} catch (error) {
-			return `Error during fetching: Error: ${error}.`;
+			return {
+				name: "FilterError",
+				message: `${error.message}`,
+				filterType: "byRating",
+			} as FilterError;
 		}
 	}
 
@@ -150,9 +158,13 @@ export default class RecipeProviderService extends Service {
 	public async getRecipesByName(name: string) {
 		this.logger.info(`Returning recipes with name which includes: ${name}`);
 		try {
-			return await this.broker.call("v1.data-store.find", { query: { name: { $regex: name, $options: 'i' } } }) as Recipe[];
+			return await this.broker.call("v1.data-store.find", { query: { name: { $regex: name, $options: "i" } } }) as Recipe[];
 		} catch (error) {
-			return `Error during fetching: Error: ${error}.`;
+			return {
+				name: "FilterError",
+				message: `${error.message}`,
+				filterType: "byName",
+			} as FilterError;
 		}
 	}
 
@@ -161,24 +173,36 @@ export default class RecipeProviderService extends Service {
 		try {
 			return await this.broker.call("v1.data-store.get", { id }) as Recipe;
 		} catch (error) {
-			return `No Recipe with id (${id}) found.`;
+			return {
+				name: "FilterError",
+				message: `${error.message}`,
+				filterType: "byID",
+			} as FilterError;
 		}
 	}
 
 	private async getByNameAndRating(name: string, rating: number) {
 		try {
-			return await this.broker.call("v1.data-store.find", { query: { rating: { $gt: rating }, name: { $regex: name, $options: 'i' } } }) as Recipe[];
+			return await this.broker.call("v1.data-store.find", { query: { rating: { $gt: rating }, name: { $regex: name, $options: "i" } } }) as Recipe[];
 		} catch (error) {
-			return `Error during fetching: Error: ${error}.`;
+			return {
+				name: "FilterError",
+				message: `${error.message}`,
+				filterType: "byNameAndRating",
+			} as FilterError;
 		}
 	}
 
 	private async getByNameAndRatingAndTags(name: string, rating: number, tagNames: string[]) {
 		try {
 			const tagIDs = await this.convertTagsInIDs(tagNames);
-			return await this.broker.call("v1.data-store.find", { query: { rating: { $gt: rating }, name: { $regex: name, $options: 'i' }, tags: { $all: tagIDs } } }) as Recipe[];
+			return await this.broker.call("v1.data-store.find", { query: { rating: { $gt: rating }, name: { $regex: name, $options: "i" }, tags: { $all: tagIDs } } }) as Recipe[];
 		} catch (error) {
-			return `Error during fetching: Error: ${error}.`;
+			return {
+				name: "FilterError",
+				message: `${error.message}`,
+				filterType: "byNameAndRatingAndTags",
+			} as FilterError;
 		}
 	}
 
@@ -187,7 +211,11 @@ export default class RecipeProviderService extends Service {
 			const tagIDs = await this.convertTagsInIDs(tagNames);
 			return await this.broker.call("v1.data-store.find", { query: { rating: { $gt: rating }, tags: { $all: tagIDs } } }) as Recipe[];
 		} catch (error) {
-			return `Error during fetching: Error: ${error}.`;
+			return {
+				name: "FilterError",
+				message: `${error.message}`,
+				filterType: "byRatingAndTags",
+			} as FilterError;
 		}
 	}
 
@@ -202,7 +230,7 @@ export default class RecipeProviderService extends Service {
 
 	private async getRecipesByTag(tagID: string) {
 		this.logger.debug(`Returning recipes with tag: ${tagID}`);
-		return await this.broker.call("v1.data-store.find", { query: { tags: { $regex: tagID, $options: 'i' } } }) as Recipe[];
+		return await this.broker.call("v1.data-store.find", { query: { tags: { $regex: tagID, $options: "i" } } }) as Recipe[];
 	}
 
 	private intersectArray(recipes: Recipe[], tags: string[]): Recipe[] {
