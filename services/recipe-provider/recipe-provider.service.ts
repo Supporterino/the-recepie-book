@@ -27,7 +27,7 @@ export default class RecipeProviderService extends Service {
 					params: {
 						id: {type: "string", min: 2},
 					},
-					async handler(ctx): Promise<string> {
+					async handler(ctx): Promise<Recipe | FilterError> {
 						return await this.getRecipeByID(ctx.params.id);
 					},
 				},
@@ -46,7 +46,7 @@ export default class RecipeProviderService extends Service {
 					params: {
 						name: {type: "string", min: 2},
 					},
-					async handler(ctx): Promise<string> {
+					async handler(ctx): Promise<Recipe[] | FilterError> {
 						return await this.getRecipesByName(ctx.params.name);
 					},
 				},
@@ -67,7 +67,7 @@ export default class RecipeProviderService extends Service {
 						tags: {type: "array", min: 1, items: "string"},
 						intersect: {type: "boolean", optional: true, default: false},
 					},
-					async handler(ctx): Promise<string> {
+					async handler(ctx): Promise<Recipe[] | FilterError> {
 						return await this.getRecipesByTags(ctx.params.tags, ctx.params.intersect);
 					},
 				},
@@ -86,7 +86,7 @@ export default class RecipeProviderService extends Service {
 					params: {
 						rating: {type: "number"},
 					},
-					async handler(ctx): Promise<string> {
+					async handler(ctx): Promise<Recipe[] | FilterError> {
 						return await this.getRecipesByRating(ctx.params.rating);
 					},
 				},
@@ -109,7 +109,7 @@ export default class RecipeProviderService extends Service {
 						ratingMin: {type: "number"},
 						tags: {type: "array", items:"string"},
 					},
-					async handler(ctx): Promise<string> {
+					async handler(ctx): Promise<Recipe[] | FilterError> {
 						return await this.filterRecipes(ctx.params.text, ctx.params.ratingMin, ctx.params.tags);
 					},
 				},
@@ -117,7 +117,7 @@ export default class RecipeProviderService extends Service {
 		});
 	}
 
-	public async filterRecipes(name: string, rating: number, tags: string[]) {
+	public async filterRecipes(name: string, rating: number, tags: string[]): Promise<Recipe[] | FilterError> {
 		if (name !== "" && tags.length === 0) {return await this.getByNameAndRating(name, rating);}
 		else if (name !== "" && tags.length > 0) {return await this.getByNameAndRatingAndTags(name, rating, tags);}
 		else if (name === "" && tags.length === 0) {return await this.broker.call("v1.recipe-provider.getByMinRating", { rating });}
@@ -128,7 +128,7 @@ export default class RecipeProviderService extends Service {
 		} as FilterError;}
 	}
 
-	public async getRecipesByRating(rating: number) {
+	public async getRecipesByRating(rating: number): Promise<Recipe[] | FilterError> {
 		this.logger.info(`Returning recipes with rating over ${rating}`);
 		try {
 			return await this.broker.call("v1.data-store.find", { query: { rating: { $gt: rating } } }) as Recipe[];
@@ -141,7 +141,7 @@ export default class RecipeProviderService extends Service {
 		}
 	}
 
-	public async getRecipesByTags(tags: string[], intersect: boolean) {
+	public async getRecipesByTags(tags: string[], intersect: boolean): Promise<Recipe[]> {
 		const tagIDs = await this.convertTagsInIDs(tags);
 		this.logger.info(`Returning recipes for multiple tags (intersected=${intersect}): ${tags}`);
 		let out = Array<Recipe>();
@@ -155,7 +155,7 @@ export default class RecipeProviderService extends Service {
 		return out;
 	}
 
-	public async getRecipesByName(name: string) {
+	public async getRecipesByName(name: string): Promise<Recipe[] | FilterError> {
 		this.logger.info(`Returning recipes with name which includes: ${name}`);
 		try {
 			return await this.broker.call("v1.data-store.find", { query: { name: { $regex: name, $options: "i" } } }) as Recipe[];
@@ -168,7 +168,7 @@ export default class RecipeProviderService extends Service {
 		}
 	}
 
-	public async getRecipeByID(id: string) {
+	public async getRecipeByID(id: string): Promise<Recipe | FilterError> {
 		this.logger.info(`Returning recipe with ID: ${id}`);
 		try {
 			return await this.broker.call("v1.data-store.get", { id }) as Recipe;
@@ -181,7 +181,7 @@ export default class RecipeProviderService extends Service {
 		}
 	}
 
-	private async getByNameAndRating(name: string, rating: number) {
+	private async getByNameAndRating(name: string, rating: number): Promise<Recipe[] | FilterError> {
 		try {
 			return await this.broker.call("v1.data-store.find", { query: { rating: { $gt: rating }, name: { $regex: name, $options: "i" } } }) as Recipe[];
 		} catch (error) {
@@ -193,7 +193,7 @@ export default class RecipeProviderService extends Service {
 		}
 	}
 
-	private async getByNameAndRatingAndTags(name: string, rating: number, tagNames: string[]) {
+	private async getByNameAndRatingAndTags(name: string, rating: number, tagNames: string[]): Promise<Recipe[] | FilterError> {
 		try {
 			const tagIDs = await this.convertTagsInIDs(tagNames);
 			return await this.broker.call("v1.data-store.find", { query: { rating: { $gt: rating }, name: { $regex: name, $options: "i" }, tags: { $all: tagIDs } } }) as Recipe[];
@@ -206,7 +206,7 @@ export default class RecipeProviderService extends Service {
 		}
 	}
 
-	private async getByRatingAndTags(rating: number, tagNames: string[]) {
+	private async getByRatingAndTags(rating: number, tagNames: string[]): Promise<Recipe[] | FilterError> {
 		try {
 			const tagIDs = await this.convertTagsInIDs(tagNames);
 			return await this.broker.call("v1.data-store.find", { query: { rating: { $gt: rating }, tags: { $all: tagIDs } } }) as Recipe[];
@@ -228,7 +228,7 @@ export default class RecipeProviderService extends Service {
 		return ids;
 	}
 
-	private async getRecipesByTag(tagID: string) {
+	private async getRecipesByTag(tagID: string): Promise<Recipe[]> {
 		this.logger.debug(`Returning recipes with tag: ${tagID}`);
 		return await this.broker.call("v1.data-store.find", { query: { tags: { $regex: tagID, $options: "i" } } }) as Recipe[];
 	}

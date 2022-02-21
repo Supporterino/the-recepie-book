@@ -4,6 +4,7 @@ import { Service, ServiceBroker} from "moleculer";
 import { CreationAndUpdateResponse } from "../../types/creation-and-update-response";
 import { Recipe } from "../../types/recipe";
 import { Tag } from "../../types/tag";
+import { Units } from "../../types/units";
 
 export default class RecipeUpdaterService extends Service {
 	public constructor(public broker: ServiceBroker) {
@@ -21,13 +22,13 @@ export default class RecipeUpdaterService extends Service {
 						id: "string",
 						name: {type: "string", optional: true},
 						description: {type: "string", optional: true},
-						ingredients: {type: "array", items: {type: "object", strict: true, props: {name: "string", amount: "number", unit: "string"}}, optional: true},
+						ingredients: {type: "array", items: {type: "object", strict: true, props: {name: "string", amount: "number", unit: { type: "enum", values: Object.values(Units) }}}, optional: true},
 						steps: {type: "array", items: "string", optional: true},
 						rating: {type: "number", optional: true},
 						tags: {type: "array", items: "string", optional: true},
 						owner: {type: "string", optional: true},
 					},
-					async handler(ctx): Promise<string> {
+					async handler(ctx): Promise<CreationAndUpdateResponse> {
 						return await this.updateRecipe(ctx.params);
 					},
 				},
@@ -35,7 +36,7 @@ export default class RecipeUpdaterService extends Service {
 		});
 	}
 
-	public async updateRecipe(updatedRecipe: any) {
+	public async updateRecipe(updatedRecipe: any): Promise<CreationAndUpdateResponse> {
 		updatedRecipe.updateTimestamp = new Date();
 		const recipe = await this.broker.call("v1.data-store.update", updatedRecipe) as Recipe;
 		return {

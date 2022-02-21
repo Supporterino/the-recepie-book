@@ -2,6 +2,7 @@
 
 import {Service, ServiceBroker, ServiceSchema} from "moleculer";
 import Connection from "../../mixins/db.mixin";
+import { Units } from "../../types/units";
 
 export default class DataStoreService extends Service {
     private DBConnection = new Connection("recipes").start();
@@ -29,7 +30,7 @@ export default class DataStoreService extends Service {
 				entityValidator: {
 					name: "string",
 					description: {type: "string", default: "", optional: true},
-					ingredients: {type: "array", items: {type: "object", strict: true, props: {name: "string", amount: "number", unit: "string"}}},
+					ingredients: {type: "array", items: {type: "object", strict: true, props: {name: "string", amount: "number", unit: { type: "enum", values: Object.values(Units) }}}},
 					steps: {type: "array", items: "string"},
 					rating: {type: "number", positive: true, default: 0, optional: true},
 					tags: {type: "array", items: "string"},

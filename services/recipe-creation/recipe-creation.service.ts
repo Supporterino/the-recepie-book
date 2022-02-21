@@ -4,6 +4,7 @@ import {Service, ServiceBroker} from "moleculer";
 import { CreationAndUpdateResponse } from "../../types/creation-and-update-response";
 import { Ingredient } from "../../types/ingredient";
 import { Recipe } from "../../types/recipe";
+import { Units } from "../../types/units";
 
 export default class RecipeCreationService extends Service {
 
@@ -32,13 +33,13 @@ export default class RecipeCreationService extends Service {
 					params: {
 						name: "string",
 						description: {type: "string", optional: true},
-						ingredients: {type: "array", items: {type: "object", strict: true, props: {name: "string", amount: "number", unit: "string"}}},
+						ingredients: {type: "array", items: {type: "object", strict: true, props: {name: "string", amount: "number", unit: { type: "enum", values: Object.values(Units) }}}},
 						steps: {type: "array", items: "string"},
 						rating: {type: "number", optional: true},
 						tags: {type: "array", items: "string"},
 						owner: "string",
 					},
-					async handler(ctx): Promise<string> {
+					async handler(ctx): Promise<CreationAndUpdateResponse> {
 						return await this.createRecipe(ctx.params);
 					},
 				},
@@ -46,7 +47,7 @@ export default class RecipeCreationService extends Service {
 		});
 	}
 
-	public async createRecipe(params: any) {
+	public async createRecipe(params: any): Promise<CreationAndUpdateResponse> {
 		const now = new Date();
 		params.tags = await this.parseTagsToID(params.tags);
 		params.creationTimestamp = now;
