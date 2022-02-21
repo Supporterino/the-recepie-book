@@ -1,7 +1,9 @@
 "use strict";
 
 import {Service, ServiceBroker} from "moleculer";
+import { CreationAndUpdateResponse } from "../../types/creation-and-update-response";
 import { Ingredient } from "../../types/ingredient";
+import { Recipe } from "../../types/recipe";
 
 export default class RecipeCreationService extends Service {
 
@@ -44,14 +46,17 @@ export default class RecipeCreationService extends Service {
 		});
 	}
 
-	public async createRecipe(params: any): Promise<string> {
+	public async createRecipe(params: any) {
 		const now = new Date();
 		params.tags = await this.parseTagsToID(params.tags);
 		params.creationTimestamp = now;
 		params.updateTimestamp = now;
 		this.logger.info(`Creating recipe (${params.name}) by ${params.owner}`);
-		await this.broker.call("v1.data-store.create", params);
-		return `Saved recipe (${params.name}) by ${params.owner}`;
+		const recipe = await this.broker.call("v1.data-store.create", params) as Recipe;
+		return <CreationAndUpdateResponse>{
+			recipeId: `${recipe._id}`,
+			msg: `Saved recipe (${params.name}) by ${params.owner}`
+		}
 	}
 
 	private async parseTagsToID(tags: string[]): Promise<string[]> {

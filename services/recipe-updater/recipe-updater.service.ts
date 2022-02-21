@@ -1,6 +1,7 @@
 "use strict";
 
 import { Service, ServiceBroker} from "moleculer";
+import { CreationAndUpdateResponse } from "../../types/creation-and-update-response";
 import { Recipe } from "../../types/recipe";
 import { Tag } from "../../types/tag";
 
@@ -36,6 +37,10 @@ export default class RecipeUpdaterService extends Service {
 
 	public async updateRecipe(updatedRecipe: any) {
 		updatedRecipe.updateTimestamp = new Date();
-		return await this.broker.call("v1.data-store.update", updatedRecipe);
+		const recipe = await this.broker.call("v1.data-store.update", updatedRecipe) as Recipe;
+		return <CreationAndUpdateResponse>{
+			recipeId: `${recipe._id}`,
+			msg: `Recipe (${recipe.name}) succesfully updated`
+		}
 	}
 }
