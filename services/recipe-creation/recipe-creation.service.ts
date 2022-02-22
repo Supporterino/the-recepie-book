@@ -55,7 +55,7 @@ export default class RecipeCreationService extends Service {
 		this.logger.info(`Creating recipe (${params.name}) by ${params.owner}`);
 		const recipe = await this.broker.call("v1.data-store.create", params) as Recipe;
 		return {
-			recipeId: `${recipe._id}`,
+			recipeId: `${recipe.id}`,
 			msg: `Saved recipe (${params.name}) by ${params.owner}`,
 		} as CreationAndUpdateResponse;
 	}

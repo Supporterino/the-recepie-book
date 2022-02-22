@@ -19,6 +19,19 @@ services:
     networks:
       - internal
 
+  tag-converter:
+    build:
+      context: .
+    image: the-recipe-book
+    env_file: docker-compose.env
+    environment:
+      SERVICES: tag-converter
+    depends_on:
+      - mongo
+      - nats
+    networks:
+      - internal
+
   recipe-updater:
     build:
       context: .
