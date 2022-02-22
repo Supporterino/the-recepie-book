@@ -40,7 +40,7 @@ export default class RecipeUpdaterService extends Service {
 		updatedRecipe.updateTimestamp = new Date();
 		const recipe = await this.broker.call("v1.data-store.update", updatedRecipe) as Recipe;
 		return {
-			recipeId: `${recipe._id}`,
+			recipeId: `${recipe.id}`,
 			msg: `Recipe (${recipe.name}) succesfully updated`,
 		} as CreationAndUpdateResponse;
 	}

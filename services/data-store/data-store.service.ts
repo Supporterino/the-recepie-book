@@ -15,8 +15,11 @@ export default class DataStoreService extends Service {
             version: 1,
             mixins: [this.DBConnection],
 			settings: {
+				idField: "id",
+				pageSize: Number.MAX_VALUE,
+				maxPageSize: Number.MAX_VALUE,
 				fields: [
-					"_id",
+					"id",
 					"name",
 					"description",
 					"ingredients",

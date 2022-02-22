@@ -17,8 +17,11 @@ export default class TagsService extends Service {
             version: 1,
             mixins: [this.DBConnection],
 			settings: {
+				idField: "id",
+				pageSize: Number.MAX_VALUE,
+				maxPageSize: Number.MAX_VALUE,
 				fields: [
-					"_id",
+					"id",
 					"name",
 				],
 				entityValidator: {
@@ -73,11 +76,11 @@ export default class TagsService extends Service {
 		const tags = await this.broker.call("v1.tags.find", { query: { name: tagName } }) as Tag[];
 		if (tags.length === 1) {
 			const tag = tags[0];
-			return tag._id;
+			return tag.id;
 		} else if (tags.length === 0) {
 			this.logger.info(`Creating tag: ${tagName}`);
 			const tag = await this.broker.call("v1.tags.create", { name: tagName }) as Tag;
-			return tag._id;
+			return tag.id;
 		} else {
 			return {
 				name: "DatabaseError",
