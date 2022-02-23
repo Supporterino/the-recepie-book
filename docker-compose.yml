@@ -19,65 +19,13 @@ services:
     networks:
       - internal
 
-  tag-converter:
+  recipe:
     build:
       context: .
     image: the-recipe-book
     env_file: docker-compose.env
     environment:
-      SERVICES: tag-converter
-    depends_on:
-      - mongo
-      - nats
-    networks:
-      - internal
-
-  recipe-updater:
-    build:
-      context: .
-    image: the-recipe-book
-    env_file: docker-compose.env
-    environment:
-      SERVICES: recipe-updater
-    depends_on:
-      - mongo
-      - nats
-    networks:
-      - internal
-
-  recipe-provider:
-    build:
-      context: .
-    image: the-recipe-book
-    env_file: docker-compose.env
-    environment:
-      SERVICES: recipe-provider
-    depends_on:
-      - mongo
-      - nats
-    networks:
-      - internal
-
-  recipe-creation:
-    build:
-      context: .
-    image: the-recipe-book
-    env_file: docker-compose.env
-    environment:
-      SERVICES: recipe-creation
-    depends_on:
-      - mongo
-      - nats
-    networks:
-      - internal
-
-  tags:
-    build:
-      context: .
-    image: the-recipe-book
-    env_file: docker-compose.env
-    environment:
-      SERVICES: tags
+      SERVICES: recipe
     depends_on:
       - mongo
       - nats
