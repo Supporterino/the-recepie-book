@@ -18,8 +18,8 @@ export default class TagsService extends Service {
             mixins: [this.DBConnection],
 			settings: {
 				idField: "id",
-				pageSize: Number.MAX_VALUE,
-				maxPageSize: Number.MAX_VALUE,
+				pageSize: 2147483647,
+				maxPageSize: 2147483647,
 				fields: [
 					"id",
 					"name",
