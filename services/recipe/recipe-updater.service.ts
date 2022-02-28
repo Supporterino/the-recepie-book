@@ -26,7 +26,6 @@ export default class RecipeUpdaterService extends Service {
 						steps: {type: "array", items: "string", optional: true},
 						rating: {type: "number", optional: true},
 						tags: {type: "array", items: "string", optional: true},
-						owner: {type: "string", optional: true},
 					},
 					async handler(ctx): Promise<CreationAndUpdateResponse> {
 						return await this.updateRecipe(ctx.params);

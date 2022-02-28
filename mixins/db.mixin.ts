@@ -24,6 +24,7 @@ export default class Connection implements Partial<ServiceSchema>, ThisType<Serv
 				 */
 				async [this.cacheCleanEventName]() {
 					if (this.broker.cacher) {
+						this.logger.info(`Cleaning caches for collection ${this.fullName},${this.collection}`);
 						await this.broker.cacher.clean(`${this.fullName}.*`);
 					}
 				},

@@ -70,14 +70,16 @@ export default class AuthService extends Service {
 	public async register(ctx: Context<any>) {
 		const oldUser = (await this.broker.call("v1.user.find", { query: { email: ctx.params.email } }) as User[])[0];
 
-		if (oldUser) {return Promise.reject(new Errors.MoleculerError("E-Mail already exists. Please login!", 409));}
-
+		if (oldUser) {
+			return Promise.reject(new Errors.MoleculerError("E-Mail already exists. Please login!", 409));
+		}
 		const user: User = {
 			username: ctx.params.username,
 			password: await hash(ctx.params.password, this.SALT_ROUNDS),
 			email: ctx.params.email,
 		};
 		await this.broker.call("v1.user.create", { username: user.username, password: user.password, email: user.email });
+		return `User (${user.username}) created.`;
 	}
 
 	public resolveToken(ctx: Context<any>) {

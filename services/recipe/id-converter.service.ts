@@ -4,12 +4,13 @@ import { Service, ServiceBroker} from "moleculer";
 import { Recipe } from "../../types/recipe";
 import { Tag } from "../../types/tag";
 import { Units } from "../../types/units";
+import { User } from "../../types/user";
 
-export default class TagConverterService extends Service {
+export default class IDConverterService extends Service {
 	public constructor(public broker: ServiceBroker) {
 		super(broker);
 		this.parseServiceSchema({
-			name: "tag-converter",
+			name: "id-converter",
             version: 1,
 			actions:{
 				convertRecipe: {
@@ -57,7 +58,7 @@ export default class TagConverterService extends Service {
 	public async convertRecipes(recipes: Recipe[]): Promise<Recipe[]> {
 		const out = new Array<Recipe>();
         for (const recipe of recipes) {
-            out.push(await this.broker.call("v1.tag-converter.convertRecipe", {recipe}));
+            out.push(await this.broker.call("v1.id-converter.convertRecipe", {recipe}));
         }
         return recipes;
     }
@@ -68,6 +69,7 @@ export default class TagConverterService extends Service {
             tagNames.push((await this.broker.call("v1.tags.get", { id: tag }) as Tag).name);
         }
         recipe.tags = tagNames;
+		recipe.owner = (await this.broker.call("v1.user.get", { id: recipe.owner }) as User).username;
         return recipe;
     }
 }

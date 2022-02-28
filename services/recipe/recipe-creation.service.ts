@@ -37,21 +37,21 @@ export default class RecipeCreationService extends Service {
 						steps: {type: "array", items: "string"},
 						rating: {type: "number", optional: true},
 						tags: {type: "array", items: "string"},
-						owner: "string",
 					},
 					async handler(ctx): Promise<CreationAndUpdateResponse> {
-						return await this.createRecipe(ctx.params);
+						return await this.createRecipe(ctx.params, ctx.meta.user.id);
 					},
 				},
 			},
 		});
 	}
 
-	public async createRecipe(params: any): Promise<CreationAndUpdateResponse> {
+	public async createRecipe(params: any, userID: string): Promise<CreationAndUpdateResponse> {
 		const now = new Date();
 		params.tags = await this.parseTagsToID(params.tags);
 		params.creationTimestamp = now;
 		params.updateTimestamp = now;
+		params.owner = userID;
 		this.logger.info(`Creating recipe (${params.name}) by ${params.owner}`);
 		const recipe = await this.broker.call("v1.data-store.create", params) as Recipe;
 		return {
