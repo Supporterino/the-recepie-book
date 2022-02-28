@@ -1,6 +1,6 @@
 "use strict";
 
-import { Service, ServiceBroker} from "moleculer";
+import { Context, Service, ServiceBroker} from "moleculer";
 import { FilterError } from "../../types/filter-error";
 import { Recipe } from "../../types/recipe";
 import { Tag } from "../../types/tag";
@@ -114,7 +114,22 @@ export default class RecipeProviderService extends Service {
 					},
 				},
 			},
+			hooks: {
+				after: {
+					// Define a global hook for all actions to remove sensitive data
+					"*"(ctx, res) {
+						return this.functionHook(ctx, res);
+					},
+				},
+			},
 		});
+	}
+
+	public async functionHook(ctx: Context<any, any>, res: Recipe[]|Recipe|FilterError) {
+		if (res instanceof FilterError) {return res;}
+		if (res.constructor.name === "Array") {return await this.broker.call("v1.id-converter.convertRecipes", { recipes: res }) as Recipe[];}
+		else {return await this.broker.call("v1.id-converter.convertRecipe", { recipe: res }) as Recipe;}
+
 	}
 
 	public async filterRecipes(name: string, rating: number, tags: string[]): Promise<Recipe[] | FilterError> {
@@ -131,7 +146,7 @@ export default class RecipeProviderService extends Service {
 	public async getRecipesByRating(rating: number): Promise<Recipe[] | FilterError> {
 		this.logger.info(`Returning recipes with rating over ${rating}`);
 		try {
-			return await this.broker.call("v1.tag-converter.convertRecipes", { recipes: await this.broker.call("v1.data-store.find", { query: { rating: { $gte: rating } } }) as Recipe[] });
+			return await this.broker.call("v1.data-store.find", { query: { rating: { $gte: rating } } }) as Recipe[];
 		} catch (error) {
 			return {
 				name: "FilterError",
@@ -152,13 +167,13 @@ export default class RecipeProviderService extends Service {
 			this.logger.debug("Intersecting all tags in array", out);
 			out = this.intersectArray(out, tagIDs);
 		}
-		return await this.broker.call("v1.tag-converter.convertRecipes", { recipes: out });
+		return  out;
 	}
 
 	public async getRecipesByName(name: string): Promise<Recipe[] | FilterError> {
 		this.logger.info(`Returning recipes with name which includes: ${name}`);
 		try {
-			return await this.broker.call("v1.tag-converter.convertRecipes", { recipes: await this.broker.call("v1.data-store.find", { query: { name: { $regex: name, $options: "i" } } }) as Recipe[] });
+			return await this.broker.call("v1.data-store.find", { query: { name: { $regex: name, $options: "i" } } }) as Recipe[];
 		} catch (error) {
 			return {
 				name: "FilterError",
@@ -183,7 +198,7 @@ export default class RecipeProviderService extends Service {
 
 	private async getByNameAndRating(name: string, rating: number): Promise<Recipe[] | FilterError> {
 		try {
-			return await this.broker.call("v1.tag-converter.convertRecipes", { recipes: await this.broker.call("v1.data-store.find", { query: { rating: { $gte: rating }, name: { $regex: name, $options: "i" } } }) as Recipe[] });
+			return  await this.broker.call("v1.data-store.find", { query: { rating: { $gte: rating }, name: { $regex: name, $options: "i" } } }) as Recipe[];
 		} catch (error) {
 			return {
 				name: "FilterError",
@@ -196,7 +211,7 @@ export default class RecipeProviderService extends Service {
 	private async getByNameAndRatingAndTags(name: string, rating: number, tagNames: string[]): Promise<Recipe[] | FilterError> {
 		try {
 			const tagIDs = await this.convertTagsInIDs(tagNames);
-			return await this.broker.call("v1.tag-converter.convertRecipes", { recipes: await this.broker.call("v1.data-store.find", { query: { rating: { $gte: rating }, name: { $regex: name, $options: "i" }, tags: { $all: tagIDs } } }) as Recipe[] });
+			return  await this.broker.call("v1.data-store.find", { query: { rating: { $gte: rating }, name: { $regex: name, $options: "i" }, tags: { $all: tagIDs } } }) as Recipe[];
 		} catch (error) {
 			return {
 				name: "FilterError",
@@ -209,7 +224,7 @@ export default class RecipeProviderService extends Service {
 	private async getByRatingAndTags(rating: number, tagNames: string[]): Promise<Recipe[] | FilterError> {
 		try {
 			const tagIDs = await this.convertTagsInIDs(tagNames);
-			return await this.broker.call("v1.tag-converter.convertRecipes", { recipes: await this.broker.call("v1.data-store.find", { query: { rating: { $gte: rating }, tags: { $all: tagIDs } } }) as Recipe[] });
+			return  await this.broker.call("v1.data-store.find", { query: { rating: { $gte: rating }, tags: { $all: tagIDs } } }) as Recipe[];
 		} catch (error) {
 			return {
 				name: "FilterError",
