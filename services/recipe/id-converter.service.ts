@@ -51,8 +51,42 @@ export default class IDConverterService extends Service {
 						return await this.convertRecipes(ctx.params.recipes);
 					},
 				},
+				convertTagsToID: {
+					params: {
+						tagNames: { type: "array", items: "string" },
+					},
+					async handler(ctx): Promise<string[]> {
+						return await this.parseTagsToID(ctx.params.tagNames);
+					},
+				},
+				convertTagsToName: {
+					params: {
+ 						tagIDs: { type: "array", items: "string" },
+					},
+					async handler(ctx): Promise<string[]> {
+						return await this.parseTagsToName(ctx.params.tagIDs);
+					},
+				},
 			},
 		});
+	}
+
+	public async parseTagsToID(tagNames: string[]): Promise<string[]> {
+		const output: string[] = [];
+		for (const tagName of tagNames) {
+			this.logger.debug(`Converting tag (${tagName}) to id`);
+			output.push(await this.broker.call("v1.tags.checkForTag", {name: tagName}));
+		}
+		return output;
+	}
+
+	public async parseTagsToName(tagIDs: string[]): Promise<string[]> {
+		const output: string[] = [];
+		for (const tagID of tagIDs) {
+			this.logger.debug(`Getting tag (${tagID}) as name`);
+			output.push((await this.broker.call("v1.tags.get", { id: tagID }) as Tag).name);
+		}
+		return output;
 	}
 
 	public async convertRecipes(recipes: Recipe[]): Promise<Recipe[]> {
@@ -60,15 +94,11 @@ export default class IDConverterService extends Service {
         for (const recipe of recipes) {
             out.push(await this.broker.call("v1.id-converter.convertRecipe", {recipe}));
         }
-        return recipes;
+        return out;
     }
 
     public async convertRecipe(recipe: Recipe): Promise<Recipe> {
-        const tagNames = new Array<string>();
-        for (const tag of recipe.tags) {
-            tagNames.push((await this.broker.call("v1.tags.get", { id: tag }) as Tag).name);
-        }
-        recipe.tags = tagNames;
+        recipe.tags = await this.broker.call("v1.id-converter.convertTagsToName", { tagIDs: recipe.tags });
 		recipe.owner = (await this.broker.call("v1.user.get", { id: recipe.owner }) as User).username;
         return recipe;
     }
