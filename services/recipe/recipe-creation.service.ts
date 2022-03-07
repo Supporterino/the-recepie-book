@@ -48,7 +48,7 @@ export default class RecipeCreationService extends Service {
 
 	public async createRecipe(params: any, userID: string): Promise<CreationAndUpdateResponse> {
 		const now = new Date();
-		params.tags = await this.parseTagsToID(params.tags);
+		params.tags = await this.broker.call("v1.id-converter.convertTagsToID", { tagNames: params.tags });
 		params.creationTimestamp = now;
 		params.updateTimestamp = now;
 		params.owner = userID;
@@ -58,14 +58,5 @@ export default class RecipeCreationService extends Service {
 			recipeId: `${recipe.id}`,
 			msg: `Saved recipe (${params.name}) by ${params.owner}`,
 		} as CreationAndUpdateResponse;
-	}
-
-	private async parseTagsToID(tags: string[]): Promise<string[]> {
-		const output: string[] = [];
-		for (const tag of tags) {
-			this.logger.debug(`Converting tag (${tag}) to id`);
-			output.push(await this.broker.call("v1.tags.checkForTag", {name: tag}));
-		}
-		return output;
 	}
 }

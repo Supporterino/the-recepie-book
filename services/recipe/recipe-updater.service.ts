@@ -36,6 +36,7 @@ export default class RecipeUpdaterService extends Service {
 	}
 
 	public async updateRecipe(updatedRecipe: any): Promise<CreationAndUpdateResponse> {
+		if (updatedRecipe.tags) {updatedRecipe.tags = await this.broker.call("v1.id-converter.convertTagsToID", { tagNames: updatedRecipe.tags });}
 		updatedRecipe.updateTimestamp = new Date();
 		const recipe = await this.broker.call("v1.data-store.update", updatedRecipe) as Recipe;
 		return {
