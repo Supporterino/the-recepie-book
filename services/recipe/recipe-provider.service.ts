@@ -186,7 +186,7 @@ export default class RecipeProviderService extends Service {
 	public async getRecipeByID(id: string): Promise<Recipe | FilterError> {
 		this.logger.info(`Returning recipe with ID: ${id}`);
 		try {
-			return await this.broker.call("v1.tag-converter.convertRecipe", { recipe: await this.broker.call("v1.data-store.get", { id }) as Recipe });
+			return  await this.broker.call("v1.data-store.get", { id }) as Recipe;
 		} catch (error) {
 			return {
 				name: "FilterError",
