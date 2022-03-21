@@ -113,6 +113,15 @@ export default class RecipeProviderService extends Service {
 						return await this.filterRecipes(ctx.params.text, ctx.params.ratingMin, ctx.params.tags);
 					},
 				},
+				getFeaturesRecipes: {
+					rest: {
+						path: "/featuredRecipes",
+						method: "GET",
+					},
+					async handler(ctx): Promise<Recipe[]> {
+						return await this.getFeatured();
+					},
+				},
 			},
 			hooks: {
 				after: {
@@ -132,15 +141,26 @@ export default class RecipeProviderService extends Service {
 
 	}
 
+	public async getFeatured(): Promise<Recipe[]> {
+		// Develop cool idea to get good recipes for requesting user
+		const count = await this.broker.call("v1.data-store.count");
+		if (count <= 25) {
+			return await this.broker.call("v1.data-store.find");
+		} else {
+			return await this.broker.call("v1.data-store.find", { limit: 25 });
+		}
+	}
+
 	public async filterRecipes(name: string, rating: number, tags: string[]): Promise<Recipe[] | FilterError> {
 		if (name !== "" && tags.length === 0) {return await this.getByNameAndRating(name, rating);}
 		else if (name !== "" && tags.length > 0) {return await this.getByNameAndRatingAndTags(name, rating, tags);}
 		else if (name === "" && tags.length === 0) {return await this.broker.call("v1.recipe-provider.getByMinRating", { rating });}
 		else if (name === "" && tags.length > 0) {return await this.getByRatingAndTags(rating, tags);}
-		else {return {
-			name: "FilterError",
-			message: "No valid filter provided.",
-		} as FilterError;}
+		else {return await this.getFeatured();}
+		// Else {return {
+		// 	Name: "FilterError",
+		// 	Message: "No valid filter provided.",
+		// } as FilterError;}
 	}
 
 	public async getRecipesByRating(rating: number): Promise<Recipe[] | FilterError> {
