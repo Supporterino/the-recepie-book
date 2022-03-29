@@ -4,6 +4,7 @@ import { Context, Service, ServiceBroker} from "moleculer";
 import { FilterError } from "../../types/filter-error";
 import { Recipe } from "../../types/recipe";
 import { Tag } from "../../types/tag";
+import { RatingPayload } from "./rating.service";
 
 export default class RecipeProviderService extends Service {
 	public constructor(public broker: ServiceBroker) {
@@ -166,7 +167,8 @@ export default class RecipeProviderService extends Service {
 	public async getRecipesByRating(rating: number): Promise<Recipe[] | FilterError> {
 		this.logger.info(`Returning recipes with rating over ${rating}`);
 		try {
-			return await this.broker.call("v1.data-store.find", { query: { rating: { $gte: rating } } }) as Recipe[];
+			const possibleRecipeIDs = (await this.broker.call("v1.rating.find", { query: { avgRating: { $gte: rating } } }) as RatingPayload[]).map(e => e.recipeID);
+			return await this.broker.call("v1.data-store.get", { id: possibleRecipeIDs }) as Recipe[];
 		} catch (error) {
 			return {
 				name: "FilterError",
@@ -218,7 +220,8 @@ export default class RecipeProviderService extends Service {
 
 	private async getByNameAndRating(name: string, rating: number): Promise<Recipe[] | FilterError> {
 		try {
-			return  await this.broker.call("v1.data-store.find", { query: { rating: { $gte: rating }, name: { $regex: name, $options: "i" } } }) as Recipe[];
+			const possibleRecipesByRating = (await this.broker.call("v1.rating.find", { query: { avgRating: { $gte: rating } } }) as RatingPayload[]).map(e => e.recipeID);
+			return  await this.broker.call("v1.data-store.find", { query: { id: { $in: possibleRecipesByRating }, name: { $regex: name, $options: "i" } } }) as Recipe[];
 		} catch (error) {
 			return {
 				name: "FilterError",
@@ -231,7 +234,8 @@ export default class RecipeProviderService extends Service {
 	private async getByNameAndRatingAndTags(name: string, rating: number, tagNames: string[]): Promise<Recipe[] | FilterError> {
 		try {
 			const tagIDs = await this.convertTagsInIDs(tagNames);
-			return  await this.broker.call("v1.data-store.find", { query: { rating: { $gte: rating }, name: { $regex: name, $options: "i" }, tags: { $all: tagIDs } } }) as Recipe[];
+			const possibleRecipesByRating = (await this.broker.call("v1.rating.find", { query: { avgRating: { $gte: rating } } }) as RatingPayload[]).map(e => e.recipeID);
+			return  await this.broker.call("v1.data-store.find", { query: { id: { $in: possibleRecipesByRating }, name: { $regex: name, $options: "i" }, tags: { $all: tagIDs } } }) as Recipe[];
 		} catch (error) {
 			return {
 				name: "FilterError",
@@ -244,7 +248,8 @@ export default class RecipeProviderService extends Service {
 	private async getByRatingAndTags(rating: number, tagNames: string[]): Promise<Recipe[] | FilterError> {
 		try {
 			const tagIDs = await this.convertTagsInIDs(tagNames);
-			return  await this.broker.call("v1.data-store.find", { query: { rating: { $gte: rating }, tags: { $all: tagIDs } } }) as Recipe[];
+			const possibleRecipesByRating = (await this.broker.call("v1.rating.find", { query: { avgRating: { $gte: rating } } }) as RatingPayload[]).map(e => e.recipeID);
+			return  await this.broker.call("v1.data-store.find", { query: { id: { $in: possibleRecipesByRating }, tags: { $all: tagIDs } } }) as Recipe[];
 		} catch (error) {
 			return {
 				name: "FilterError",

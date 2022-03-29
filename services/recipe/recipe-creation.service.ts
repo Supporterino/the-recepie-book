@@ -32,10 +32,9 @@ export default class RecipeCreationService extends Service {
 					},
 					params: {
 						name: "string",
-						description: {type: "string", optional: true},
+						description: {type: "string", default: "", optional: true},
 						ingredients: {type: "array", items: {type: "object", strict: true, props: {name: "string", amount: "number", unit: { type: "enum", values: Object.values(Units) }}}},
 						steps: {type: "array", items: "string"},
-						rating: {type: "number", optional: true},
 						tags: {type: "array", items: "string"},
 					},
 					async handler(ctx): Promise<CreationAndUpdateResponse> {
@@ -48,15 +47,25 @@ export default class RecipeCreationService extends Service {
 
 	public async createRecipe(params: any, userID: string): Promise<CreationAndUpdateResponse> {
 		const now = new Date();
-		params.tags = await this.broker.call("v1.id-converter.convertTagsToID", { tagNames: params.tags });
-		params.creationTimestamp = now;
-		params.updateTimestamp = now;
-		params.owner = userID;
+		const creationData: CreationData = { ...params };
+
+		creationData.tags = await this.broker.call("v1.id-converter.convertTagsToID", { tagNames: params.tags });
+		(creationData as Recipe).creationTimestamp = now;
+		(creationData as Recipe).updateTimestamp = now;
+		(creationData as Recipe).owner = userID;
 		this.logger.info(`Creating recipe (${params.name}) by ${params.owner}`);
-		const recipe = await this.broker.call("v1.data-store.create", params) as Recipe;
+		const recipe = await this.broker.call("v1.data-store.create", (creationData as Recipe)) as Recipe;
 		return {
 			recipeId: `${recipe.id}`,
 			msg: `Saved recipe (${params.name}) by ${params.owner}`,
 		} as CreationAndUpdateResponse;
 	}
+}
+
+interface CreationData {
+	name: string;
+	description: string;
+	ingredients: Ingredient[];
+	steps: string[];
+	tags: string[];
 }
