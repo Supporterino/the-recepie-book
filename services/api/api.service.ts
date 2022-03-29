@@ -105,7 +105,7 @@ export default class ApiService extends Service {
 				 * @param {IncomingMessage} req
 				 * @returns {Promise}
 				 */
-				authorize(ctx: Context<any, any>, route: object, req: IncomingMessage): Promise<any> {
+				authorize(ctx: Context<any, any>, route: object, req: IncomingMessage): Promise<any> { // eslint-disable-line prefer-arrow/prefer-arrow-functions
 					let token;
 					if (req.headers.authorization) {
 						const type = req.headers.authorization.split(" ")[0];
