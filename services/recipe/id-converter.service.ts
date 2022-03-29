@@ -5,6 +5,7 @@ import { Recipe } from "../../types/recipe";
 import { Tag } from "../../types/tag";
 import { Units } from "../../types/units";
 import { User } from "../../types/user";
+import { RatingPayload } from "./rating.service";
 
 export default class IDConverterService extends Service {
 	public constructor(public broker: ServiceBroker) {
@@ -67,6 +68,14 @@ export default class IDConverterService extends Service {
 						return await this.parseTagsToName(ctx.params.tagIDs);
 					},
 				},
+				convertRatingIDtoRating: {
+					params: {
+						ratingID: "string",
+					},
+					async handler(ctx): Promise<number> {
+						return await this.getRatingForRatingID(ctx.params.ratingID);
+					},
+				},
 			},
 		});
 	}
@@ -89,6 +98,11 @@ export default class IDConverterService extends Service {
 		return output;
 	}
 
+	public async getRatingForRatingID(ratingID: string): Promise<number> {
+		const ratingPayload = await this.broker.call("v1.rating.get", { id: ratingID }) as RatingPayload;
+		return ratingPayload.avgRating;
+	}
+
 	public async convertRecipes(recipes: Recipe[]): Promise<Recipe[]> {
 		const out = new Array<Recipe>();
         for (const recipe of recipes) {
@@ -100,6 +114,7 @@ export default class IDConverterService extends Service {
     public async convertRecipe(recipe: Recipe): Promise<Recipe> {
         recipe.tags = await this.broker.call("v1.id-converter.convertTagsToName", { tagIDs: recipe.tags });
 		recipe.owner = (await this.broker.call("v1.user.get", { id: recipe.owner }) as User).username;
+		recipe.rating = await this.broker.call("v1.id-converter.convertRatingIDtoRating", { ratingID: recipe.rating });
         return recipe;
     }
 }

@@ -2,7 +2,7 @@
 
 import {Service, ServiceBroker, ServiceSchema} from "moleculer";
 import Connection from "../../mixins/db.mixin";
-import { FavoriteModificationResponse } from "../../types/favorite-modification-response";
+import { FavoriteResponse } from "../../types/favorite-response";
 import { Recipe } from "../../types/recipe";
 
 export default class FavoriteService extends Service {
@@ -59,19 +59,19 @@ export default class FavoriteService extends Service {
 					params: {
 						recipeID: "string",
 					},
-					async handler(ctx): Promise<FavoriteModificationResponse> {
+					async handler(ctx): Promise<FavoriteResponse> {
 						return await this.addFavorite(ctx.meta.user.id, ctx.params.recipeID);
 					},
 				},
 				removeFavorite: {
 					rest: {
 						path: "/removeFavorite",
-						method: "POST",
+						method: "DELETE",
 					},
 					params: {
 						recipeID: "string",
 					},
-					async handler(ctx): Promise<FavoriteModificationResponse> {
+					async handler(ctx): Promise<FavoriteResponse> {
 						return await this.removeFavorite(ctx.meta.user.id, ctx.params.recipeID);
 					},
 				},
@@ -88,29 +88,29 @@ export default class FavoriteService extends Service {
 		return out;
 	}
 
-	async addFavorite(userID: string, recipeID: string): Promise<FavoriteModificationResponse> {
+	async addFavorite(userID: string, recipeID: string): Promise<FavoriteResponse> {
 		const favoritesOfUser = (await this.broker.call("v1.favorite.find", { query: { userid: userID } }) as FavoritePayload[])[0];
 		if (favoritesOfUser) {
-			if (favoritesOfUser.favorites.indexOf(recipeID) !== -1) {return { success: false, method: "add", msg: `Couldn't add recipe (${recipeID}) already present` } as FavoriteModificationResponse;}
+			if (favoritesOfUser.favorites.indexOf(recipeID) !== -1) {return { success: false, method: "add", msg: `Couldn't add recipe (${recipeID}) already present` } as FavoriteResponse;}
 			favoritesOfUser.favorites.push(recipeID);
 			await this.broker.call("v1.favorite.update", { id: favoritesOfUser.id, favorites: favoritesOfUser.favorites });
-			return { success: true, method: "add", msg: `Recipe (${recipeID}) add to users (${userID}) favorites` } as FavoriteModificationResponse;
+			return { success: true, method: "add", msg: `Recipe (${recipeID}) add to users (${userID}) favorites` } as FavoriteResponse;
 		} else {
 			await this.broker.call("v1.favorite.create", { userid: userID, favorties: [recipeID] });
-			return { success: true, method: "add", msg: `Created favorites for user (${userID}) with recipe (${recipeID})` } as FavoriteModificationResponse;
+			return { success: true, method: "add", msg: `Created favorites for user (${userID}) with recipe (${recipeID})` } as FavoriteResponse;
 		}
 	}
 
-	async removeFavorite(userID: string, recipeID: string): Promise<FavoriteModificationResponse> {
+	async removeFavorite(userID: string, recipeID: string): Promise<FavoriteResponse> {
 		const favoritesOfUser = (await this.broker.call("v1.favorite.find", { query: { userid: userID } }) as FavoritePayload[])[0];
 		if (favoritesOfUser) {
 			const index = favoritesOfUser.favorites.indexOf(recipeID);
-			if (index === -1) {return { success: false, method: "remove", msg: `Couldn't remove recipe since it isn't in users(${userID}) favorites`} as FavoriteModificationResponse;}
+			if (index === -1) {return { success: false, method: "remove", msg: `Couldn't remove recipe since it isn't in users(${userID}) favorites`} as FavoriteResponse;}
 			favoritesOfUser.favorites.splice(index, 1);
 			await this.broker.call("v1.favorite.update", { id: favoritesOfUser.id, favorites: favoritesOfUser.favorites });
-			return { success: true, method: "remove", msg: `Remove recipe from user(${userID}) favorites`} as FavoriteModificationResponse;
+			return { success: true, method: "remove", msg: `Remove recipe from user(${userID}) favorites`} as FavoriteResponse;
 		} else {
-			return { success: false, method: "remove", msg: `Couldn't remove recipe since user(${userID}) has no favorites`} as FavoriteModificationResponse;
+			return { success: false, method: "remove", msg: `Couldn't remove recipe since user(${userID}) has no favorites`} as FavoriteResponse;
 		}
 	}
 }
