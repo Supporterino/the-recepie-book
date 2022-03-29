@@ -79,7 +79,7 @@ export default class FavoriteService extends Service {
 		}, schema));
 	}
 
-	async getFavorites(userID: string): Promise<Recipe[]> {
+	public async getFavorites(userID: string): Promise<Recipe[]> {
 		const favorites = (await this.broker.call("v1.favorite.find", { query: { userid: userID } }) as FavoritePayload[])[0].favorites;
 		const out = new Array<Recipe>();
 		for (const id of favorites) {
@@ -88,7 +88,7 @@ export default class FavoriteService extends Service {
 		return out;
 	}
 
-	async addFavorite(userID: string, recipeID: string): Promise<FavoriteResponse> {
+	public async addFavorite(userID: string, recipeID: string): Promise<FavoriteResponse> {
 		const favoritesOfUser = (await this.broker.call("v1.favorite.find", { query: { userid: userID } }) as FavoritePayload[])[0];
 		if (favoritesOfUser) {
 			if (favoritesOfUser.favorites.indexOf(recipeID) !== -1) {return { success: false, method: "add", msg: `Couldn't add recipe (${recipeID}) already present` } as FavoriteResponse;}
@@ -101,7 +101,7 @@ export default class FavoriteService extends Service {
 		}
 	}
 
-	async removeFavorite(userID: string, recipeID: string): Promise<FavoriteResponse> {
+	public async removeFavorite(userID: string, recipeID: string): Promise<FavoriteResponse> {
 		const favoritesOfUser = (await this.broker.call("v1.favorite.find", { query: { userid: userID } }) as FavoritePayload[])[0];
 		if (favoritesOfUser) {
 			const index = favoritesOfUser.favorites.indexOf(recipeID);

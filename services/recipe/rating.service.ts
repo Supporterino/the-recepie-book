@@ -2,7 +2,8 @@
 
 import {Service, ServiceBroker, ServiceSchema} from "moleculer";
 import Connection from "../../mixins/db.mixin";
-import { RatingOperations, RatingResponse } from "../../types/rating-response";
+import { RatingOperations } from "../../types/rating-methods";
+import { RatingResponse } from "../../types/rating-response";
 import { User } from "../../types/user";
 
 export default class RatingService extends Service {
@@ -106,8 +107,8 @@ export default class RatingService extends Service {
 			return { success: true, method: RatingOperations.UPDATE, recipeID, userID, msg: "User already rated recipe. Updated instead" } as RatingResponse;
 		}
 
-		const newRecipeRating = this.addRatingAndRecalculate(recipeRating, userID, rating);
-		await this.broker.call("v1.rating.update", newRecipeRating);
+		const updatedRecipeRating = this.addRatingAndRecalculate(recipeRating, userID, rating);
+		await this.broker.call("v1.rating.update", updatedRecipeRating);
 		return { success: true, method: RatingOperations.UPDATE, recipeID, userID, msg: "User rated recipe" } as RatingResponse;
 	}
 
@@ -148,10 +149,10 @@ export default class RatingService extends Service {
 		return ratingPayload;
 	}
 
-	private async getByRecipeID(recipeID: string): Promise<RatingPayload | undefined> {
+	private async getByRecipeID(recipeID: string): Promise<RatingPayload | null> {
 		const possibleRating = (await this.broker.call("v1.rating.find", { query: { recipeID }}) as RatingPayload[])[0];
 		if (possibleRating) {return possibleRating;}
-		else {return undefined;}
+		else {return null;}
 	}
 }
 

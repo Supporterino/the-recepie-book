@@ -1,6 +1,7 @@
 "use strict";
 
 import { Service, ServiceBroker} from "moleculer";
+import { Errors } from "moleculer-web";
 import { CreationAndUpdateResponse } from "../../types/creation-and-update-response";
 import { Ingredient } from "../../types/ingredient";
 import { Recipe } from "../../types/recipe";
@@ -27,15 +28,17 @@ export default class RecipeUpdaterService extends Service {
 						steps: {type: "array", items: "string", optional: true},
 						tags: {type: "array", items: "string", optional: true},
 					},
-					async handler(ctx): Promise<CreationAndUpdateResponse> {
-						return await this.updateRecipe(ctx.params);
+					async handler(ctx): Promise<CreationAndUpdateResponse | Error> {
+						return await this.updateRecipe(ctx.params, ctx.meta.user.id);
 					},
 				},
 			},
 		});
 	}
 
-	public async updateRecipe(updatedRecipe: any): Promise<CreationAndUpdateResponse> {
+	public async updateRecipe(updatedRecipe: any, userID: string): Promise<CreationAndUpdateResponse | Error> {
+		if (userID !== (await this.broker.call("v1.data-store.get", { id: updatedRecipe.id }) as Recipe).id) {return new Errors.UnAuthorizedError(Errors.ERR_INVALID_TOKEN, "Not the owner of the recipe");}
+
 		const updateData: UpdateData = { ...updatedRecipe };
 
 		if (updateData.tags) {updateData.tags = await this.broker.call("v1.id-converter.convertTagsToID", { tagNames: updateData.tags });}
