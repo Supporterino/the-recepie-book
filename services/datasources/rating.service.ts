@@ -1,10 +1,9 @@
 "use strict";
 
-import {Service, ServiceBroker, ServiceSchema} from "moleculer";
+import {Context, Service, ServiceBroker, ServiceSchema} from "moleculer";
 import Connection from "../../mixins/db.mixin";
 import { RatingOperations } from "../../types/rating-methods";
 import { RatingResponse } from "../../types/rating-response";
-import { User } from "../../types/user";
 
 export default class RatingService extends Service {
     private DBConnection = new Connection("ratings").start();
@@ -72,6 +71,17 @@ export default class RatingService extends Service {
 					},
 				},
 			},
+			events: {
+				"recipe.deletion": {
+					params: {
+						recipeID: "string",
+					},
+					handler: async (ctx: Context<any>) => {
+						const id = await this.getByRecipeID(ctx.params.recipeID);
+						ctx.call("v1.rating.remove", { id });
+					},
+				},
+			},
 		}, schema));
 	}
 
@@ -93,7 +103,7 @@ export default class RatingService extends Service {
 		const existingRating = await this.getByRecipeID(recipeID);
 		if (existingRating) {recipeRating = existingRating;}
 		else {
-			this.logger.info("No rating for recipe present, creting new one.", recipeID);
+			this.logger.info("No rating for recipe present, creating new one.", recipeID);
 			recipeRating = await this.createNewRatingPayload(recipeID);
 		}
 
@@ -126,6 +136,7 @@ export default class RatingService extends Service {
 
 	private async createNewRatingPayload(recipeID: string): Promise<RatingPayload> {
 		const newRatingPayload = await this.broker.call("v1.rating.create", { recipeID, ratings: new Array<RatingEntry>(), avgRating: null }) as RatingPayload;
+		this.broker.emit("recipe.first_rating", { recipeID, ratingID: newRatingPayload.id });
 		return newRatingPayload;
 	}
 

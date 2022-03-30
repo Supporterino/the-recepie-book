@@ -1,5 +1,5 @@
-"use strict";
-import {BrokerOptions, Errors, MetricRegistry, ServiceBroker} from "moleculer";
+import {BrokerOptions, Errors} from "moleculer";
+require("@moleculer/lab");
 
 /**
  * Moleculer ServiceBroker configuration file
@@ -36,7 +36,7 @@ const brokerConfig: BrokerOptions = {
 
 	// Enable/disable logging or use custom logger. More info: https://moleculer.services/docs/0.14/logging.html
 	// Available logger types: "Console", "File", "Pino", "Winston", "Bunyan", "debug", "Log4js", "Datadog"
-	logger: {
+	logger: [{
 		type: "Console",
 		options: {
 			// Using colors on the output
@@ -50,7 +50,8 @@ const brokerConfig: BrokerOptions = {
 			// Auto-padding the module name in order to messages begin at the same column.
 			autoPadding: false,
 		},
-	},
+		// @ts-ignore
+	}, "Laboratory"],
 	// Default log level for built-in console logger. It can be overwritten in logger options above.
 	// Available values: trace, debug, info, warn, error, fatal
 	logLevel: "info",
@@ -154,40 +155,42 @@ const brokerConfig: BrokerOptions = {
 	// Enable/disable built-in metrics function. More info: https://moleculer.services/docs/0.14/metrics.html
 	metrics: {
 		enabled: true,
+		reporter: "Laboratory",
 		// Available built-in reporters: "Console", "CSV", "Event", "Prometheus", "Datadog", "StatsD"
-		reporter: {
-			type: "Prometheus",
-			options: {
-					// HTTP port
-					port: 3030,
-						// HTTP URL path
-						path: "/metrics",
-						// Default labels which are appended to all metrics labels
-						defaultLabels: (registry: MetricRegistry) => ({
-						namespace: registry.broker.namespace,
-						nodeID: registry.broker.nodeID,
-					}),
-				},
-		},
+		// Reporter: {
+		// 	Type: "Prometheus",
+		// 	Options: {
+		// 			// HTTP port
+		// 			Port: 3030,
+		// 				// HTTP URL path
+		// 				Path: "/metrics",
+		// 				// Default labels which are appended to all metrics labels
+		// 				DefaultLabels: (registry: MetricRegistry) => ({
+		// 				Namespace: registry.broker.namespace,
+		// 				NodeID: registry.broker.nodeID,
+		// 			}),
+		// 		},
+		// },
 	},
 
 	// Enable built-in tracing function. More info: https://moleculer.services/docs/0.14/tracing.html
 	tracing: {
-		enabled: false,
+		enabled: true,
+		exporter: "Laboratory",
 		// Available built-in exporters: "Console", "Datadog", "Event", "EventLegacy", "Jaeger", "Zipkin"
-		exporter: {
-			type: "Console", // Console exporter is only for development!
-			options: {
-				// Custom logger
-				logger: null,
-					// Using colors
-					colors: true,
-					// Width of row
-					width: 100,
-					// Gauge width in the row
-					gaugeWidth: 40,
-			},
-		},
+		// Exporter: {
+		// 	Type: "Console", // Console exporter is only for development!
+		// 	Options: {
+		// 		// Custom logger
+		// 		Logger: null,
+		// 			// Using colors
+		// 			Colors: true,
+		// 			// Width of row
+		// 			Width: 100,
+		// 			// Gauge width in the row
+		// 			GaugeWidth: 40,
+		// 	},
+		// },
 	},
 
 	// Register custom middlewares

@@ -108,6 +108,6 @@ export default class AuthService extends Service {
 	}
 
 	private generateToken(user: User) {
-		return sign({ id:user.id, email: user.email } as AuthPayload, this.JWT_SECRET, { expiresIn: "5m" });
+		return sign({ id:user.id, email: user.email } as AuthPayload, this.JWT_SECRET, { expiresIn: "6h" });
 	}
 }

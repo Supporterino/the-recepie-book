@@ -1,6 +1,6 @@
 "use strict";
 
-import {Service, ServiceBroker, ServiceSchema} from "moleculer";
+import {Context, Service, ServiceBroker, ServiceSchema} from "moleculer";
 import Connection from "../../mixins/db.mixin";
 import { FavoriteResponse } from "../../types/favorite-response";
 import { Recipe } from "../../types/recipe";
@@ -76,6 +76,19 @@ export default class FavoriteService extends Service {
 					},
 				},
 			},
+			events: {
+				"recipe.deletion": {
+					params: {
+						recipeID: "string",
+					},
+					handler: async (ctx: Context<any>) => {
+						const userIds = (await ctx.call("v1.favorite.find", { populate: "userid" }) as FavoritePayload[]).map(e => e.userid);
+						for (const id of userIds) {
+							this.removeFavorite(id, ctx.params.recipeID);
+						}
+					},
+				},
+			},
 		}, schema));
 	}
 
@@ -96,7 +109,7 @@ export default class FavoriteService extends Service {
 			await this.broker.call("v1.favorite.update", { id: favoritesOfUser.id, favorites: favoritesOfUser.favorites });
 			return { success: true, method: "add", msg: `Recipe (${recipeID}) add to users (${userID}) favorites` } as FavoriteResponse;
 		} else {
-			await this.broker.call("v1.favorite.create", { userid: userID, favorties: [recipeID] });
+			await this.broker.call("v1.favorite.create", { userid: userID, favorites: [recipeID] });
 			return { success: true, method: "add", msg: `Created favorites for user (${userID}) with recipe (${recipeID})` } as FavoriteResponse;
 		}
 	}

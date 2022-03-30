@@ -5,7 +5,7 @@ import { Recipe } from "../../types/recipe";
 import { Tag } from "../../types/tag";
 import { Units } from "../../types/units";
 import { User } from "../../types/user";
-import { RatingPayload } from "./rating.service";
+import { RatingPayload } from "../datasources/rating.service";
 
 export default class IDConverterService extends Service {
 	public constructor(public broker: ServiceBroker) {
@@ -22,7 +22,7 @@ export default class IDConverterService extends Service {
 							description: {type: "string"},
 							ingredients: {type: "array", items: {type: "object", strict: true, props: {name: "string", amount: "number", unit: { type: "enum", values: Object.values(Units) }}}},
 							steps: {type: "array", items: "string"},
-							rating: {type: "number"},
+							rating: {type: "string"},
 							tags: {type: "array", items: "string"},
 							owner: "string",
 							creationTimestamp: { type: "date", convert: true },
@@ -41,7 +41,7 @@ export default class IDConverterService extends Service {
 							description: {type: "string"},
 							ingredients: {type: "array", items: {type: "object", strict: true, props: {name: "string", amount: "number", unit: { type: "enum", values: Object.values(Units) }}}},
 							steps: {type: "array", items: "string"},
-							rating: {type: "number"},
+							rating: {type: "string"},
 							tags: {type: "array", items: "string"},
 							owner: "string",
 							creationTimestamp: { type: "date", convert: true },

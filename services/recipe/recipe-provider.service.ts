@@ -4,7 +4,7 @@ import { Context, Service, ServiceBroker} from "moleculer";
 import { FilterError } from "../../types/filter-error";
 import { Recipe } from "../../types/recipe";
 import { Tag } from "../../types/tag";
-import { RatingPayload } from "./rating.service";
+import { RatingPayload } from "../datasources/rating.service";
 
 export default class RecipeProviderService extends Service {
 	public constructor(public broker: ServiceBroker) {
@@ -114,7 +114,7 @@ export default class RecipeProviderService extends Service {
 						return await this.filterRecipes(ctx.params.text, ctx.params.ratingMin, ctx.params.tags);
 					},
 				},
-				getFeaturesRecipes: {
+				getFeaturedRecipes: {
 					rest: {
 						path: "/featuredRecipes",
 						method: "GET",
@@ -153,15 +153,15 @@ export default class RecipeProviderService extends Service {
 	}
 
 	public async filterRecipes(name: string, rating: number, tags: string[]): Promise<Recipe[] | FilterError> {
-		if (name !== "" && tags.length === 0) {return await this.getByNameAndRating(name, rating);}
+		if (name === "" && tags.length === 0 && rating === 0) {return await this.getFeatured();}
+		else if (name !== "" && tags.length === 0) {return await this.getByNameAndRating(name, rating);}
 		else if (name !== "" && tags.length > 0) {return await this.getByNameAndRatingAndTags(name, rating, tags);}
 		else if (name === "" && tags.length === 0) {return await this.broker.call("v1.recipe-provider.getByMinRating", { rating });}
 		else if (name === "" && tags.length > 0) {return await this.getByRatingAndTags(rating, tags);}
-		else {return await this.getFeatured();}
-		// Else {return {
-		// 	Name: "FilterError",
-		// 	Message: "No valid filter provided.",
-		// } as FilterError;}
+		else {return {
+			name: "FilterError",
+			message: "No valid filter provided.",
+		} as FilterError;}
 	}
 
 	public async getRecipesByRating(rating: number): Promise<Recipe[] | FilterError> {
