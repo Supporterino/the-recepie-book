@@ -1,6 +1,6 @@
 "use strict";
 
-import {Service, ServiceBroker, ServiceSchema} from "moleculer";
+import {Context, Service, ServiceBroker, ServiceSchema} from "moleculer";
 import Connection from "../../mixins/db.mixin";
 import { Units } from "../../types/units";
 
@@ -41,6 +41,25 @@ export default class DataStoreService extends Service {
 					owner: "string",
 					creationTimestamp: { type: "date", convert: true },
 					updateTimestamp: { type: "date", convert: true },
+				},
+			},
+			events: {
+				"recipe.first_rating": {
+					params: {
+						recipeID: "string",
+						ratingID: "string",
+					},
+					handler: (ctx: Context<any>) => {
+						ctx.call("v1.data-store.update", { id: ctx.params.recipeID, rating: ctx.params.ratingID });
+					},
+				},
+				"recipe.deletion": {
+					params: {
+						recipeID: "string",
+					},
+					handler: (ctx: Context<any>) => {
+						ctx.call("v1.data-store.remove", { id: ctx.params.recipeID });
+					},
 				},
 			},
 		}, schema));

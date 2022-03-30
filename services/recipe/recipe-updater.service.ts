@@ -5,7 +5,6 @@ import { Errors } from "moleculer-web";
 import { CreationAndUpdateResponse } from "../../types/creation-and-update-response";
 import { Ingredient } from "../../types/ingredient";
 import { Recipe } from "../../types/recipe";
-import { Tag } from "../../types/tag";
 import { Units } from "../../types/units";
 
 export default class RecipeUpdaterService extends Service {
@@ -37,7 +36,7 @@ export default class RecipeUpdaterService extends Service {
 	}
 
 	public async updateRecipe(updatedRecipe: any, userID: string): Promise<CreationAndUpdateResponse | Error> {
-		if (userID !== (await this.broker.call("v1.data-store.get", { id: updatedRecipe.id }) as Recipe).id) {return new Errors.UnAuthorizedError(Errors.ERR_INVALID_TOKEN, "Not the owner of the recipe");}
+		if (userID !== (await this.broker.call("v1.data-store.get", { id: updatedRecipe.id }) as Recipe).owner) {return new Errors.UnAuthorizedError(Errors.ERR_INVALID_TOKEN, "Not the owner of the recipe");}
 
 		const updateData: UpdateData = { ...updatedRecipe };
 
