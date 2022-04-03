@@ -1,11 +1,8 @@
 "use strict";
 
 import { Service, ServiceBroker} from "moleculer";
-import { Recipe } from "../../types/recipe";
-import { Tag } from "../../types/tag";
-import { Units } from "../../types/units";
-import { User } from "../../types/user";
-import { RatingPayload } from "../datasources/rating.service";
+import { RatingData } from "../../shared";
+import { Units, Recipe, Tag, User } from "../../types";
 
 export default class IDConverterService extends Service {
 	public constructor(public broker: ServiceBroker) {
@@ -14,6 +11,13 @@ export default class IDConverterService extends Service {
 			name: "id-converter",
             version: 1,
 			actions:{
+				/**
+				 * Converts a recipe from the internal data foramt with ids to the sendable object with all datas by resolving the ids.
+				 *
+				 * @method
+				 * @param {Recipe} recipe - The recipe to process
+				 * @returns {Recipe}
+				 */
 				convertRecipe: {
 					params: {
 						recipe: { type: "object", props: {
@@ -33,6 +37,13 @@ export default class IDConverterService extends Service {
 						return await this.convertRecipe(ctx.params.recipe);
 					},
 				},
+				/**
+				 * Convert an array of recipes by converting one by one.
+				 *
+				 * @method
+				 * @param {Array<Recipe>} recipes
+				 * @returns {Array<Recipe>}
+				 */
 				convertRecipes: {
 					params: {
 						recipes: { type: "array", items: {type: "object", props: {
@@ -52,6 +63,13 @@ export default class IDConverterService extends Service {
 						return await this.convertRecipes(ctx.params.recipes);
 					},
 				},
+				/**
+				 * Converts the tags of a recipe to their ids via the tags service
+				 *
+				 * @method
+				 * @param {Array<string>} tagNames - The tag names to convert
+				 * @param {Array<string>}
+				 */
 				convertTagsToID: {
 					params: {
 						tagNames: { type: "array", items: "string" },
@@ -60,6 +78,13 @@ export default class IDConverterService extends Service {
 						return await this.parseTagsToID(ctx.params.tagNames);
 					},
 				},
+				/**
+				 * Converts the tag ids of a recipe to their name via the tags service
+				 *
+				 * @method
+				 * @param {Array<string>} tagIDs - The tag ids to convert
+				 * @param {Array<string>}
+				 */
 				convertTagsToName: {
 					params: {
  						tagIDs: { type: "array", items: "string" },
@@ -68,6 +93,13 @@ export default class IDConverterService extends Service {
 						return await this.parseTagsToName(ctx.params.tagIDs);
 					},
 				},
+				/**
+				 * Convert a rating id to the avg rating for this id
+				 *
+				 * @method
+				 * @param {String} ratingID
+				 * @returns {number}
+				 */
 				convertRatingIDtoRating: {
 					params: {
 						ratingID: "string",
@@ -81,6 +113,7 @@ export default class IDConverterService extends Service {
 	}
 
 	public async parseTagsToID(tagNames: string[]): Promise<string[]> {
+		this.logger.info("[Converter] Parse tags to id.", tagNames);
 		const output: string[] = [];
 		for (const tagName of tagNames) {
 			this.logger.debug(`Converting tag (${tagName}) to id`);
@@ -90,17 +123,22 @@ export default class IDConverterService extends Service {
 	}
 
 	public async parseTagsToName(tagIDs: string[]): Promise<string[]> {
+		this.logger.info("[Converter] Parse tag ids into name.", tagIDs);
 		const output: string[] = [];
 		for (const tagID of tagIDs) {
-			this.logger.debug(`Getting tag (${tagID}) as name`);
+			this.logger.debug(`Getting tag (${tagID})`);
 			output.push((await this.broker.call("v1.tags.get", { id: tagID }) as Tag).name);
 		}
 		return output;
 	}
 
 	public async getRatingForRatingID(ratingID: string): Promise<number> {
-		const ratingPayload = await this.broker.call("v1.rating.get", { id: ratingID }) as RatingPayload;
-		return ratingPayload.avgRating;
+		this.logger.info(`[Converter] Getting avg rating for rating id: ${ratingID}`);
+		if (ratingID === "") {return 0;}
+		else {
+			const ratingPayload = await this.broker.call("v1.rating.get", { id: ratingID }) as RatingData;
+			return ratingPayload.avgRating;
+		}
 	}
 
 	public async convertRecipes(recipes: Recipe[]): Promise<Recipe[]> {
@@ -112,9 +150,23 @@ export default class IDConverterService extends Service {
     }
 
     public async convertRecipe(recipe: Recipe): Promise<Recipe> {
-        recipe.tags = await this.broker.call("v1.id-converter.convertTagsToName", { tagIDs: recipe.tags });
-		recipe.owner = (await this.broker.call("v1.user.get", { id: recipe.owner }) as User).username;
-		recipe.rating = await this.broker.call("v1.id-converter.convertRatingIDtoRating", { ratingID: recipe.rating });
+		this.logger.info(`[Converter] Converting recipe: ${recipe.id}`);
+		const [ newTags, user, rating ] = await Promise.all([this.getTagPromise(recipe.tags), this.getOwnerPromise(recipe.owner), this.getRatingPromise(recipe.rating as string)]);
+		recipe.tags = newTags;
+		recipe.owner = user.username;
+		recipe.rating = rating;
         return recipe;
     }
+
+	private getTagPromise(tagIDs: string[]): Promise<string[]> {
+		return this.broker.call("v1.id-converter.convertTagsToName", { tagIDs });
+	}
+
+	private getOwnerPromise(userID: string): Promise<User> {
+		return this.broker.call("v1.user.get", { id: userID });
+	}
+
+	private getRatingPromise(ratingID: string): Promise<number> {
+		return this.broker.call("v1.id-converter.convertRatingIDtoRating", { ratingID });
+	}
 }

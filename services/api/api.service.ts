@@ -1,7 +1,7 @@
 import {IncomingMessage} from "http";
 import {Service, ServiceBroker, Context} from "moleculer";
 import ApiGateway, { Errors } from "moleculer-web";
-import { AuthPayload } from "../../types/authToken";
+import { Auth } from "../../types";
 
 export default class ApiService extends Service {
 
@@ -106,7 +106,7 @@ export default class ApiService extends Service {
 				 * @param {IncomingMessage} req
 				 * @returns {Promise}
 				 */
-				authorize(ctx: Context<any, any>, route: object, req: IncomingMessage): Promise<any> { // eslint-disable-line prefer-arrow/prefer-arrow-functions
+				authorize: (ctx: Context<any, any>, route: object, req: IncomingMessage): Promise<any> => {
 					let token;
 					if (req.headers.authorization) {
 						const type = req.headers.authorization.split(" ")[0];
@@ -119,7 +119,7 @@ export default class ApiService extends Service {
 					}
 					// Verify JWT token
 					return ctx.call("v1.auth.resolveToken", { token })
-						.then((authPayload: AuthPayload) => {
+						.then((authPayload: Auth) => {
 							if (!authPayload)
 								{return Promise.reject(new Errors.UnAuthorizedError(Errors.ERR_INVALID_TOKEN, ""));}
 

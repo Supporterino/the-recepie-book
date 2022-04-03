@@ -2,7 +2,8 @@
 
 import {Context, Service, ServiceBroker, ServiceSchema} from "moleculer";
 import Connection from "../../mixins/db.mixin";
-import { Units } from "../../types/units";
+import { MAX_PAGE_SIZE, PAGE_SIZE } from "../../shared";
+import { Units } from "../../types";
 
 export default class DataStoreService extends Service {
     private DBConnection = new Connection("recipes").start();
@@ -16,8 +17,8 @@ export default class DataStoreService extends Service {
             mixins: [this.DBConnection],
 			settings: {
 				idField: "id",
-				pageSize: 2147483647,
-				maxPageSize: 2147483647,
+				pageSize: PAGE_SIZE,
+				maxPageSize: MAX_PAGE_SIZE,
 				fields: [
 					"id",
 					"name",
@@ -35,7 +36,6 @@ export default class DataStoreService extends Service {
 					description: {type: "string", default: "", optional: true},
 					ingredients: {type: "array", items: {type: "object", strict: true, props: {name: "string", amount: "number", unit: { type: "enum", values: Object.values(Units) }}}},
 					steps: {type: "array", items: "string"},
-					// Rating: {type: "number", positive: true, default: 0, optional: true},
 					rating: { type: "string", default: "", optional: true },
 					tags: {type: "array", items: "string"},
 					owner: "string",
