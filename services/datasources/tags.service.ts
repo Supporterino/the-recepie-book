@@ -2,9 +2,8 @@
 
 import {Service, ServiceBroker, ServiceSchema} from "moleculer";
 import Connection from "../../mixins/db.mixin";
-import { DatabaseError } from "../../types/database-error";
-import { FilterError } from "../../types/filter-error";
-import { Tag } from "../../types/tag";
+import { MAX_PAGE_SIZE, PAGE_SIZE } from "../../shared";
+import { Tag, FilterError, DatabaseError } from "../../types";
 
 export default class TagsService extends Service {
     private DBConnection = new Connection("tags").start();
@@ -18,8 +17,8 @@ export default class TagsService extends Service {
             mixins: [this.DBConnection],
 			settings: {
 				idField: "id",
-				pageSize: 2147483647,
-				maxPageSize: 2147483647,
+				pageSize: PAGE_SIZE,
+				maxPageSize: MAX_PAGE_SIZE,
 				fields: [
 					"id",
 					"name",

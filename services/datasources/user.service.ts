@@ -2,7 +2,8 @@
 
 import {Service, ServiceBroker, ServiceSchema} from "moleculer";
 import Connection from "../../mixins/db.mixin";
-import { User } from "../../types/user";
+import { MAX_PAGE_SIZE, PAGE_SIZE } from "../../shared";
+import { Recipe, User } from "../../types";
 
 export default class UserService extends Service {
     private DBConnection = new Connection("users").start();
@@ -16,8 +17,8 @@ export default class UserService extends Service {
             mixins: [this.DBConnection],
 			settings: {
 				idField: "id",
-				pageSize: 2147483647,
-				maxPageSize: 2147483647,
+				pageSize: PAGE_SIZE,
+				maxPageSize: MAX_PAGE_SIZE,
 				fields: [
 					"id",
 					"username",
@@ -31,6 +32,14 @@ export default class UserService extends Service {
 				},
 			},
 			actions: {
+				/**
+				 * Check if a given pair of userid and email match the entry in the database
+				 *
+				 * @method
+				 * @param {String} id - The user id
+				 * @param {String} email
+				 * @returns {Boolean}
+				 */
 				isLegitUser: {
 					params: {
 						id: "string",
@@ -40,6 +49,23 @@ export default class UserService extends Service {
 						return await this.checkAuthentic(ctx.params.id, ctx.params.email);
 					},
 				},
+				/**
+				 * Checks if the userID matches the owner of the recipe
+				 *
+				 * @method
+				 * @param {String} userID
+				 * @param {String} recipeID
+				 * @returns {boolean}
+				 */
+				ownsRecipe: {
+					params: {
+						userID: "string",
+						recipeID: "string",
+					},
+					async handler(ctx): Promise<boolean> {
+						return await this.checkAuthor(ctx.params.userID, ctx.params.recipeID);
+					},
+				},
 			},
 		}, schema));
 	}
@@ -47,6 +73,11 @@ export default class UserService extends Service {
 	public async checkAuthentic(id: string, email: string): Promise<boolean> {
 		const user = await this.broker.call("v1.user.get", { id }) as User;
 		if (user && user.email === email) {return true;}
+		else {return false;}
+	}
+
+	public async checkAuthor(userID: string, recipeID: string): Promise<boolean> {
+		if (userID === (await this.broker.call("v1.data-store.get", { id: recipeID }) as Recipe).owner) {return true;}
 		else {return false;}
 	}
 }

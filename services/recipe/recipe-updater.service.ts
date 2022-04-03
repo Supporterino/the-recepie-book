@@ -1,11 +1,8 @@
 "use strict";
 
-import { Service, ServiceBroker} from "moleculer";
-import { Errors } from "moleculer-web";
-import { CreationAndUpdateResponse } from "../../types/creation-and-update-response";
-import { Ingredient } from "../../types/ingredient";
-import { Recipe } from "../../types/recipe";
-import { Units } from "../../types/units";
+import { Errors, Service, ServiceBroker} from "moleculer";
+import { UpdateData } from "../../shared/interfaces/updateData";
+import { UpdateResponse, Recipe, Units, Ingredient } from "../../types";
 
 export default class RecipeUpdaterService extends Service {
 	public constructor(public broker: ServiceBroker) {
@@ -14,6 +11,17 @@ export default class RecipeUpdaterService extends Service {
 			name: "recipe-updater",
             version: 1,
 			actions:{
+				/**
+				 * Update fields of a recipe
+				 *
+				 * @method
+				 * @param {Number} id
+				 * @param {String} description - optional
+				 * @param {Array<Ingredient>} ingredients - optionak
+				 * @param {Array<String>} steps - optional
+				 * @param {Array<String>} tags - optional
+				 * @returns {UpdateResponse | Errors.MoleculerError}
+				 */
 				updateRecipe: {
 					rest: {
 						path: "/updateRecipe",
@@ -27,7 +35,7 @@ export default class RecipeUpdaterService extends Service {
 						steps: {type: "array", items: "string", optional: true},
 						tags: {type: "array", items: "string", optional: true},
 					},
-					async handler(ctx): Promise<CreationAndUpdateResponse | Error> {
+					async handler(ctx): Promise<UpdateResponse | Errors.MoleculerError> {
 						return await this.updateRecipe(ctx.params, ctx.meta.user.id);
 					},
 				},
@@ -35,8 +43,8 @@ export default class RecipeUpdaterService extends Service {
 		});
 	}
 
-	public async updateRecipe(updatedRecipe: any, userID: string): Promise<CreationAndUpdateResponse | Error> {
-		if (userID !== (await this.broker.call("v1.data-store.get", { id: updatedRecipe.id }) as Recipe).owner) {return new Errors.UnAuthorizedError(Errors.ERR_INVALID_TOKEN, "Not the owner of the recipe");}
+	public async updateRecipe(updatedRecipe: any, userID: string): Promise<UpdateResponse | Errors.MoleculerError> {
+		if (!(await this.broker.call("v1.user.ownsRecipe", { userID, recipeID: updatedRecipe.id }) as boolean)) {return new Errors.MoleculerError("User doesn't own this recipe.", 403);}
 
 		const updateData: UpdateData = { ...updatedRecipe };
 
@@ -44,17 +52,8 @@ export default class RecipeUpdaterService extends Service {
 		(updateData as Recipe).updateTimestamp = new Date();
 		const recipe = await this.broker.call("v1.data-store.update", (updateData as Recipe)) as Recipe;
 		return {
-			recipeId: `${recipe.id}`,
+			recipeID: `${recipe.id}`,
 			msg: `Recipe (${recipe.name}) succesfully updated`,
-		} as CreationAndUpdateResponse;
+		} as UpdateResponse;
 	}
-}
-
-interface UpdateData {
-	id: string;
-	name?: string;
-	description?: string;
-	ingredients?: Ingredient[];
-	steps?: string[];
-	tags?: string[];
 }

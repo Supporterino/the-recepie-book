@@ -3,11 +3,10 @@
 import {Context, Errors, Service, ServiceBroker} from "moleculer";
 import { sign, verify, VerifyErrors } from "jsonwebtoken";
 import { hash, compare } from "bcrypt";
-import { AuthPayload } from "../../types/authToken";
-import { User } from "../../types/user";
+import { Auth, User } from "../../types";
 
 export default class AuthService extends Service {
-	private JWT_SECRET: string = "Rp2ipMvMT6zXUx%dLDdSGEo2Unehu5o%h5FPRYEG3sbbSAtT5ky&5zdmc3!7xCdn";
+	private JWT_SECRET: string = process.env.JWT_SECRET;
 	private SALT_ROUNDS: number = 10;
 
 	public constructor(public broker: ServiceBroker) {
@@ -16,6 +15,14 @@ export default class AuthService extends Service {
 			name: "auth",
             version: 1,
 			actions: {
+				/**
+				 * Logs a user in by giving him a valid JWT token. A user is authenticated, when the password matches the one stored in the database for that email.
+				 *
+				 * @method
+				 * @param {String} email - the email address of the user
+				 * @param {String} password - the password to check against the salt in the DB
+				 * @returns {String | Errors.MoleculerError} - The JWT token or a invalid credentrials error
+				 */
 				login: {
 					rest: {
 						path: "/login",
@@ -25,10 +32,19 @@ export default class AuthService extends Service {
 						email: { type: "email", normalize: true },
 						password: "string",
 					},
-					async handler(ctx) {
+					async handler(ctx): Promise<string | Errors.MoleculerError> {
 						return await this.login(ctx);
 					},
 				},
+				/**
+				 * Checks if the user already exists. If not the password is hashed and the new user is safed in the user database.
+				 *
+				 * @method
+				 * @param {String} username - The name of the new account
+				 * @param {String} password - The password for the new account
+				 * @param {String} email - The email to link to the account, has to be unique over all accounts
+				 * @returns {String | Errors.MoleculerError} - A string to indicate successful registration or an error if the email is already in use
+				 */
 				register: {
 					rest: {
 						path: "/register",
@@ -39,10 +55,17 @@ export default class AuthService extends Service {
 						password: "string",
 						email: { type: "email", normalize: true },
 					},
-					async handler(ctx) {
+					async handler(ctx): Promise<string | Errors.MoleculerError> {
 						return await this.register(ctx);
 					},
 				},
+				/**
+				 * Checks if a JWT token is valid and if it isn't expired it returns the encoded {@link Auth} data.
+				 *
+				 * @method
+				 * @param {String} token - The token to validate and extract
+				 * @returns {Auth} - The decoded {@link Auth} data
+				 */
 				resolveToken: {
 					cache: {
 						keys: ["token"],
@@ -51,26 +74,20 @@ export default class AuthService extends Service {
 					params: {
 						token: "string",
 					},
-					handler(ctx) {
+					handler(ctx): PromiseLike<Auth | Promise<Auth>> {
 						return this.resolveToken(ctx);
-					},
-				},
-				verifyToken: {
-					params: {
-						token: "string",
-					},
-					handler(ctx) {
-						return verify(ctx.params.token, this.JWT_SECRET);
 					},
 				},
 			},
 		});
 	}
 
-	public async register(ctx: Context<any>) {
-		const oldUser = (await this.broker.call("v1.user.find", { query: { email: ctx.params.email } }) as User[])[0];
+	public async register(ctx: Context<any>): Promise<string | Errors.MoleculerError> {
+		this.logger.info("Checking if user is already registered.", ctx.params.email);
+		const oldUser = await this.getUser(ctx.params.email);
 
 		if (oldUser) {
+			this.logger.warn(`${oldUser.email} has already a registered account.`);
 			return Promise.reject(new Errors.MoleculerError("E-Mail already exists. Please login!", 409));
 		}
 		const user: User = {
@@ -78,36 +95,45 @@ export default class AuthService extends Service {
 			password: await hash(ctx.params.password, this.SALT_ROUNDS),
 			email: ctx.params.email,
 		};
+		this.logger.info(`Creating new account(${user.username}) for email: ${user.email}`);
 		await this.broker.call("v1.user.create", { username: user.username, password: user.password, email: user.email });
-		return `User (${user.username}) created.`;
+		return `User[${user.username}] created.`;
 	}
 
-	public resolveToken(ctx: Context<any>) {
+	public resolveToken(ctx: Context<any>): PromiseLike<Auth | Promise<Auth>> {
 		return new this.Promise((resolve, reject) => {
-			verify(ctx.params.token, this.JWT_SECRET, (err: VerifyErrors, decoded: User) => {
+			verify(ctx.params.token, this.JWT_SECRET, (err: VerifyErrors, decoded: Auth) => {
 				if (err) {
 					return reject(err);
 				}
 				resolve(decoded);
 			});
-		}).then(async (decoded: AuthPayload) => {
+		}).then(async (decoded: Auth) => {
 			if (decoded.id && await this.broker.call("v1.user.isLegitUser", { id: decoded.id, email: decoded.email })) {
 				return decoded;
 			}
 		});
 	}
 
-	public async login(ctx: Context<any>): Promise<unknown> {
-		const user = (await this.broker.call("v1.user.find", { query: { email: ctx.params.email } }) as User[])[0];
+	public async login(ctx: Context<any>): Promise<string | Errors.MoleculerError> {
+		const user = await this.getUser(ctx.params.email);
 
 		if (user && await compare(ctx.params.password, user.password)) {
+			this.logger.info(`${ctx.params.email} logged in.`);
 			return this.generateToken(user);
 		} else {
+			this.logger.warn("Wrong password for user.", ctx.params.email);
 			return Promise.reject(new Errors.MoleculerError("Invalid Credentials", 400));
 		}
 	}
 
-	private generateToken(user: User) {
-		return sign({ id:user.id, email: user.email } as AuthPayload, this.JWT_SECRET, { expiresIn: "6h" });
+	private generateToken(user: User): string {
+		this.logger.info(`Generating token for ${user.email}`);
+		return sign({ id:user.id, email: user.email } as Auth, this.JWT_SECRET, { expiresIn: "6h" });
+	}
+
+	private async getUser(email: string): Promise<User> {
+		this.logger.info(`Loading user data for user: ${email}`);
+		return (await this.broker.call("v1.user.find", { query: { email } }) as User[])[0];
 	}
 }

@@ -1,10 +1,8 @@
 "use strict";
 
 import {Service, ServiceBroker} from "moleculer";
-import { CreationAndUpdateResponse } from "../../types/creation-and-update-response";
-import { Ingredient } from "../../types/ingredient";
-import { Recipe } from "../../types/recipe";
-import { Units } from "../../types/units";
+import { CreationData } from "../../shared";
+import { CreationResponse, Recipe, Units } from "../../types";
 
 export default class RecipeCreationService extends Service {
 
@@ -37,7 +35,7 @@ export default class RecipeCreationService extends Service {
 						steps: {type: "array", items: "string"},
 						tags: {type: "array", items: "string"},
 					},
-					async handler(ctx): Promise<CreationAndUpdateResponse> {
+					async handler(ctx): Promise<CreationResponse> {
 						return await this.createRecipe(ctx.params, ctx.meta.user.id);
 					},
 				},
@@ -45,7 +43,7 @@ export default class RecipeCreationService extends Service {
 		});
 	}
 
-	public async createRecipe(params: any, userID: string): Promise<CreationAndUpdateResponse> {
+	public async createRecipe(params: any, userID: string): Promise<CreationResponse> {
 		const now = new Date();
 		const creationData: CreationData = { ...params };
 
@@ -56,16 +54,8 @@ export default class RecipeCreationService extends Service {
 		this.logger.info(`Creating recipe (${params.name}) by ${params.owner}`);
 		const recipe = await this.broker.call("v1.data-store.create", (creationData as Recipe)) as Recipe;
 		return {
-			recipeId: `${recipe.id}`,
+			recipeID: `${recipe.id}`,
 			msg: `Saved recipe (${params.name}) by ${params.owner}`,
-		} as CreationAndUpdateResponse;
+		} as CreationResponse;
 	}
-}
-
-interface CreationData {
-	name: string;
-	description: string;
-	ingredients: Ingredient[];
-	steps: string[];
-	tags: string[];
 }
