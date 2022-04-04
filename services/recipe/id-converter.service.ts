@@ -1,7 +1,7 @@
 "use strict";
 
 import { Service, ServiceBroker} from "moleculer";
-import { RatingData } from "../../shared";
+import { RatingData, RecipeData } from "../../shared";
 import { Units, Recipe, Tag, User } from "../../types";
 
 export default class IDConverterService extends Service {
@@ -15,7 +15,7 @@ export default class IDConverterService extends Service {
 				 * Converts a recipe from the internal data foramt with ids to the sendable object with all datas by resolving the ids.
 				 *
 				 * @method
-				 * @param {Recipe} recipe - The recipe to process
+				 * @param {RecipeData} recipe - The recipe to process
 				 * @returns {Recipe}
 				 */
 				convertRecipe: {
@@ -41,7 +41,7 @@ export default class IDConverterService extends Service {
 				 * Convert an array of recipes by converting one by one.
 				 *
 				 * @method
-				 * @param {Array<Recipe>} recipes
+				 * @param {Array<RecipeData>} recipes
 				 * @returns {Array<Recipe>}
 				 */
 				convertRecipes: {
@@ -141,7 +141,7 @@ export default class IDConverterService extends Service {
 		}
 	}
 
-	public async convertRecipes(recipes: Recipe[]): Promise<Recipe[]> {
+	public async convertRecipes(recipes: RecipeData[]): Promise<Recipe[]> {
 		const out = new Array<Recipe>();
         for (const recipe of recipes) {
             out.push(await this.broker.call("v1.id-converter.convertRecipe", {recipe}));
@@ -149,13 +149,22 @@ export default class IDConverterService extends Service {
         return out;
     }
 
-    public async convertRecipe(recipe: Recipe): Promise<Recipe> {
+    public async convertRecipe(recipe: RecipeData): Promise<Recipe> {
 		this.logger.info(`[Converter] Converting recipe: ${recipe.id}`);
-		const [ newTags, user, rating ] = await Promise.all([this.getTagPromise(recipe.tags), this.getOwnerPromise(recipe.owner), this.getRatingPromise(recipe.rating as string)]);
-		recipe.tags = newTags;
-		recipe.owner = user.username;
-		recipe.rating = rating;
-        return recipe;
+		const [ tags, user, rating ] = await Promise.all([this.getTagPromise(recipe.tags), this.getOwnerPromise(recipe.owner), this.getRatingPromise(recipe.rating as string)]);
+		const out = {
+			id: recipe.id,
+			name: recipe.name,
+			description: recipe.description,
+			ingredients: recipe.ingredients,
+			steps: recipe.steps,
+			rating,
+			tags,
+			owner: user.username,
+			creationTimestamp: recipe.creationTimestamp,
+			updateTimestamp: recipe.updateTimestamp,
+		} as Recipe;
+        return out;
     }
 
 	private getTagPromise(tagIDs: string[]): Promise<string[]> {
