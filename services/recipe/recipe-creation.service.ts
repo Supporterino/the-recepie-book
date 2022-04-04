@@ -1,8 +1,8 @@
 "use strict";
 
 import {Service, ServiceBroker} from "moleculer";
-import { CreationData } from "../../shared";
-import { CreationResponse, Recipe, Units } from "../../types";
+import { CreationData, RecipeData } from "../../shared";
+import { CreationResponse, Units } from "../../types";
 
 export default class RecipeCreationService extends Service {
 
@@ -48,11 +48,11 @@ export default class RecipeCreationService extends Service {
 		const creationData: CreationData = { ...params };
 
 		creationData.tags = await this.broker.call("v1.id-converter.convertTagsToID", { tagNames: params.tags });
-		(creationData as Recipe).creationTimestamp = now;
-		(creationData as Recipe).updateTimestamp = now;
-		(creationData as Recipe).owner = userID;
+		(creationData as RecipeData).creationTimestamp = now;
+		(creationData as RecipeData).updateTimestamp = now;
+		(creationData as RecipeData).owner = userID;
 		this.logger.info(`Creating recipe (${params.name}) by ${params.owner}`);
-		const recipe = await this.broker.call("v1.data-store.create", (creationData as Recipe)) as Recipe;
+		const recipe = await this.broker.call("v1.data-store.create", (creationData as RecipeData)) as RecipeData;
 		return {
 			recipeID: `${recipe.id}`,
 			msg: `Saved recipe (${params.name}) by ${params.owner}`,

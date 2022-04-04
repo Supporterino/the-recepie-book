@@ -1,8 +1,9 @@
 "use strict";
 
 import { Errors, Service, ServiceBroker} from "moleculer";
+import { RecipeData } from "../../shared";
 import { UpdateData } from "../../shared/interfaces/updateData";
-import { UpdateResponse, Recipe, Units, Ingredient } from "../../types";
+import { UpdateResponse, Units } from "../../types";
 
 export default class RecipeUpdaterService extends Service {
 	public constructor(public broker: ServiceBroker) {
@@ -49,8 +50,8 @@ export default class RecipeUpdaterService extends Service {
 		const updateData: UpdateData = { ...updatedRecipe };
 
 		if (updateData.tags) {updateData.tags = await this.broker.call("v1.id-converter.convertTagsToID", { tagNames: updateData.tags });}
-		(updateData as Recipe).updateTimestamp = new Date();
-		const recipe = await this.broker.call("v1.data-store.update", (updateData as Recipe)) as Recipe;
+		(updateData as RecipeData).updateTimestamp = new Date();
+		const recipe = await this.broker.call("v1.data-store.update", (updateData as RecipeData)) as RecipeData;
 		return {
 			recipeID: `${recipe.id}`,
 			msg: `Recipe (${recipe.name}) succesfully updated`,
