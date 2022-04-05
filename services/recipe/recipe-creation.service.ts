@@ -1,8 +1,9 @@
 "use strict";
 
 import {Service, ServiceBroker} from "moleculer";
-import { CreationData, RecipeData } from "../../shared";
-import { CreationResponse, Units } from "../../types";
+import { ErrorMixin } from "../../mixins/error_logging.mixin";
+import { BaseError, RecipeData } from "../../shared";
+import { CreationData, CreationResponse, Units } from "../../types";
 
 export default class RecipeCreationService extends Service {
 
@@ -11,6 +12,7 @@ export default class RecipeCreationService extends Service {
 		this.parseServiceSchema({
 			name: "recipe-creation",
             version: 1,
+			mixins: [ErrorMixin],
 			actions:{
 				/**
 				 * Validates the input and converts the tags to ids and sends a creation request to the `data-store` service
@@ -47,15 +49,19 @@ export default class RecipeCreationService extends Service {
 		const now = new Date();
 		const creationData: CreationData = { ...params };
 
-		creationData.tags = await this.broker.call("v1.id-converter.convertTagsToID", { tagNames: params.tags });
-		(creationData as RecipeData).creationTimestamp = now;
-		(creationData as RecipeData).updateTimestamp = now;
-		(creationData as RecipeData).owner = userID;
-		this.logger.info(`Creating recipe (${params.name}) by ${params.owner}`);
-		const recipe = await this.broker.call("v1.data-store.create", (creationData as RecipeData)) as RecipeData;
-		return {
-			recipeID: `${recipe.id}`,
-			msg: `Saved recipe (${params.name}) by ${params.owner}`,
-		} as CreationResponse;
+		try {
+			creationData.tags = await this.broker.call("v1.id-converter.convertTagsToID", { tagNames: params.tags });
+			(creationData as RecipeData).creationTimestamp = now;
+			(creationData as RecipeData).updateTimestamp = now;
+			(creationData as RecipeData).owner = userID;
+			this.logger.info(`Creating recipe (${params.name}) by ${params.owner}`);
+			const recipe = await this.broker.call("v1.data-store.create", (creationData as RecipeData)) as RecipeData;
+			return {
+				recipeID: `${recipe.id}`,
+				msg: `Saved recipe (${params.name}) by ${params.owner}`,
+			} as CreationResponse;
+		} catch (error) {
+			if (error instanceof BaseError) {throw error;}
+		}
 	}
 }

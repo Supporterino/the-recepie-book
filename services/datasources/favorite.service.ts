@@ -2,7 +2,8 @@
 
 import {Context, Service, ServiceBroker, ServiceSchema} from "moleculer";
 import Connection from "../../mixins/db.mixin";
-import { FavoriteData, MAX_PAGE_SIZE, PAGE_SIZE } from "../../shared";
+import { ErrorMixin } from "../../mixins/error_logging.mixin";
+import { BaseError, DatabaseError, FavoriteData, FetchError, FetchTarget, MAX_PAGE_SIZE, PAGE_SIZE } from "../../shared";
 import { Recipe, FavoriteResponse } from "../../types";
 
 export default class FavoriteService extends Service {
@@ -14,7 +15,7 @@ export default class FavoriteService extends Service {
 		this.parseServiceSchema(Service.mergeSchemas({
 			name: "favorite",
             version: 1,
-            mixins: [this.DBConnection],
+            mixins: [this.DBConnection, ErrorMixin],
 			settings: {
 				idField: "id",
 				pageSize: PAGE_SIZE,
@@ -128,8 +129,15 @@ export default class FavoriteService extends Service {
 		const favorites = (await this.getFavoriteData(userID)).favorites;
 		const out = new Array<Recipe>();
 		for (const id of favorites) {
-			this.logger.info(`User[${userID}] Getting recipe for recipe id: ${id}`);
-			out.push(await this.broker.call("v1.recipe-provider.getById", { id }));
+			try {
+				this.logger.info(`User[${userID}] Getting recipe for recipe id: ${id}`);
+				out.push(await this.broker.call("v1.recipe-provider.getById", { id }));
+			} catch (error) {
+				if (error instanceof BaseError) {throw error;}
+				else {
+					throw new FetchError(error.message || "Failed to load favorited recipes by ID", error.code || 500, FetchTarget.RECIPE_PROVIDER);
+				}
+			}
 		}
 		return out;
 	}
@@ -142,13 +150,21 @@ export default class FavoriteService extends Service {
 				return { success: false, method: "add", msg: `Couldn't add recipe (${recipeID}) already present` } as FavoriteResponse;
 			}
 			favoritesOfUser.favorites.push(recipeID);
-			this.logger.info(`User[${userID}] Adding to favorites: ${recipeID}`);
-			await this.broker.call("v1.favorite.update", { id: favoritesOfUser.id, favorites: favoritesOfUser.favorites });
-			return { success: true, method: "add", msg: `Recipe (${recipeID}) add to users (${userID}) favorites` } as FavoriteResponse;
+			try {
+				this.logger.info(`User[${userID}] Adding to favorites: ${recipeID}`);
+				await this.broker.call("v1.favorite.update", { id: favoritesOfUser.id, favorites: favoritesOfUser.favorites });
+				return { success: true, method: "add", msg: `Recipe (${recipeID}) add to users (${userID}) favorites` } as FavoriteResponse;
+			} catch (error) {
+				throw new DatabaseError(error.message || "Update call via add failed.", error.code || 500, this.name);
+			}
 		} else {
-			this.logger.info(`User[${userID}] Creating new FavoriteData for user.`);
-			await this.broker.call("v1.favorite.create", { userid: userID, favorites: [recipeID] });
-			return { success: true, method: "add", msg: `Created favorites for user (${userID}) with recipe (${recipeID})` } as FavoriteResponse;
+			try {
+				this.logger.info(`User[${userID}] Creating new FavoriteData for user.`);
+				await this.broker.call("v1.favorite.create", { userid: userID, favorites: [recipeID] });
+				return { success: true, method: "add", msg: `Created favorites for user (${userID}) with recipe (${recipeID})` } as FavoriteResponse;
+			} catch (error) {
+				throw new DatabaseError(error.message || "Creation of FavoriteData failed.", error.code || 500, this.name);
+			}
 		}
 	}
 
@@ -161,9 +177,13 @@ export default class FavoriteService extends Service {
 				return { success: false, method: "remove", msg: `Couldn't remove recipe since it isn't in users(${userID}) favorites`} as FavoriteResponse;
 			}
 			favoritesOfUser.favorites.splice(index, 1);
-			this.logger.info(`User[${userID}] Removing recipe: ${recipeID}`);
-			await this.broker.call("v1.favorite.update", { id: favoritesOfUser.id, favorites: favoritesOfUser.favorites });
-			return { success: true, method: "remove", msg: `Remove recipe from user(${userID}) favorites`} as FavoriteResponse;
+			try {
+				this.logger.info(`User[${userID}] Removing recipe: ${recipeID}`);
+				await this.broker.call("v1.favorite.update", { id: favoritesOfUser.id, favorites: favoritesOfUser.favorites });
+				return { success: true, method: "remove", msg: `Remove recipe from user(${userID}) favorites`} as FavoriteResponse;
+			} catch (error) {
+				throw new DatabaseError(error.message || "Updating of favorite data failed (update call).", error.code || 500, this.name);
+			}
 		} else {
 			this.logger.warn(`User[${userID}] User has no favorites.`);
 			return { success: false, method: "remove", msg: `Couldn't remove recipe since user(${userID}) has no favorites`} as FavoriteResponse;
@@ -172,6 +192,11 @@ export default class FavoriteService extends Service {
 
 	private async getFavoriteData(userID: string): Promise<FavoriteData> {
 		this.logger.info(`User[${userID}] Getting FavoriteData`);
-		return (await this.broker.call("v1.favorite.find", { query: { userid: userID } }) as FavoriteData[])[0];
+		try {
+			const data = (await this.broker.call("v1.favorite.find", { query: { userid: userID } }) as FavoriteData[])[0];
+			return data;
+		} catch (error) {
+			throw new DatabaseError(error.message || "Fetching of data via find failed", error.code || 500, this.name);
+		}
 	}
 }

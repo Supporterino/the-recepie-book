@@ -4,6 +4,8 @@ import {Context, Errors, Service, ServiceBroker} from "moleculer";
 import { sign, verify, VerifyErrors } from "jsonwebtoken";
 import { hash, compare } from "bcrypt";
 import { Auth, User } from "../../types";
+import { DatabaseError } from "../../shared";
+import { ErrorMixin } from "../../mixins/error_logging.mixin";
 
 export default class AuthService extends Service {
 	private JWT_SECRET: string = process.env.JWT_SECRET;
@@ -14,6 +16,7 @@ export default class AuthService extends Service {
 		this.parseServiceSchema({
 			name: "auth",
             version: 1,
+			mixins: [ErrorMixin],
 			actions: {
 				/**
 				 * Logs a user in by giving him a valid JWT token. A user is authenticated, when the password matches the one stored in the database for that email.
@@ -95,9 +98,13 @@ export default class AuthService extends Service {
 			password: await hash(ctx.params.password, this.SALT_ROUNDS),
 			email: ctx.params.email,
 		};
-		this.logger.info(`Creating new account(${user.username}) for email: ${user.email}`);
-		await this.broker.call("v1.user.create", { username: user.username, password: user.password, email: user.email });
-		return `User[${user.username}] created.`;
+		try {
+			this.logger.info(`Creating new account(${user.username}) for email: ${user.email}`);
+			await this.broker.call("v1.user.create", { username: user.username, password: user.password, email: user.email });
+			return `User[${user.username}] created.`;
+		} catch (error) {
+			throw new DatabaseError(error.message || "Creation of user failed.", error.code || 500, "user");
+		}
 	}
 
 	public resolveToken(ctx: Context<any>): PromiseLike<Auth | Promise<Auth>> {
@@ -134,6 +141,11 @@ export default class AuthService extends Service {
 
 	private async getUser(email: string): Promise<User> {
 		this.logger.info(`Loading user data for user: ${email}`);
-		return (await this.broker.call("v1.user.find", { query: { email } }) as User[])[0];
+		try {
+			const user = (await this.broker.call("v1.user.find", { query: { email } }) as User[])[0];
+			return user;
+		} catch (error) {
+			throw new DatabaseError(error.message || "Couldn't load user via its email address.", error.code || 500, "user");
+		}
 	}
 }

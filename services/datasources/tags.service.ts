@@ -2,8 +2,9 @@
 
 import {Service, ServiceBroker, ServiceSchema} from "moleculer";
 import Connection from "../../mixins/db.mixin";
-import { MAX_PAGE_SIZE, PAGE_SIZE } from "../../shared";
-import { Tag, FilterError, DatabaseError } from "../../types";
+import { ErrorMixin } from "../../mixins/error_logging.mixin";
+import { BaseError, DatabaseError, MAX_PAGE_SIZE, PAGE_SIZE } from "../../shared";
+import { Tag } from "../../types";
 
 export default class TagsService extends Service {
     private DBConnection = new Connection("tags").start();
@@ -14,7 +15,7 @@ export default class TagsService extends Service {
 		this.parseServiceSchema(Service.mergeSchemas({
 			name: "tags",
             version: 1,
-            mixins: [this.DBConnection],
+            mixins: [this.DBConnection, ErrorMixin],
 			settings: {
 				idField: "id",
 				pageSize: PAGE_SIZE,
@@ -43,7 +44,7 @@ export default class TagsService extends Service {
 					params: {
 						name: {type: "string", min: 2},
 					},
-					async handler(ctx): Promise<Tag[]|FilterError> {
+					async handler(ctx): Promise<Tag[]> {
 						return await this.getTagByName(ctx.params.name);
 					},
 				},
@@ -62,7 +63,7 @@ export default class TagsService extends Service {
 					params: {
 						name: {type: "string", min: 2},
 					},
-					async handler(ctx): Promise<string | DatabaseError> {
+					async handler(ctx): Promise<string> {
 						return await this.checkTagAndGetID(ctx.params.name);
 					},
 				},
@@ -70,34 +71,30 @@ export default class TagsService extends Service {
 		}, schema));
 	}
 
-	public async checkTagAndGetID(tagName: string): Promise<string | DatabaseError> {
+	public async checkTagAndGetID(tagName: string): Promise<string> {
 		this.logger.info(`Checking if ${tagName} exists in the DB.`);
-		const tags = await this.broker.call("v1.tags.find", { query: { name: tagName } }) as Tag[];
-		if (tags.length === 1) {
-			const tag = tags[0];
-			return tag.id;
-		} else if (tags.length === 0) {
-			this.logger.info(`Creating tag: ${tagName}`);
-			const tag = await this.broker.call("v1.tags.create", { name: tagName }) as Tag;
-			return tag.id;
-		} else {
-			return {
-				name: "DatabaseError",
-				message: "The database has a duplicate id which shouldn't be possible. Who fucked up?",
-				database: "tags",
-			} as DatabaseError;
+		try {
+			const tags = await this.broker.call("v1.tags.find", { query: { name: tagName } }) as Tag[];
+			if (tags.length === 1) {
+				const tag = tags[0];
+				return tag.id;
+			} else if (tags.length === 0) {
+				this.logger.info(`Creating tag: ${tagName}`);
+				const tag = await this.broker.call("v1.tags.create", { name: tagName }) as Tag;
+				return tag.id;
+			} else {
+				throw new BaseError("Duplicate ID for tag. HOW ?!? o_O", 500);
+			}
+		} catch (error) {
+			throw new DatabaseError(error.message || "Failed to check id for tag.", error.code || 500, this.name);
 		}
 	}
 
-	public async getTagByName(name: string): Promise<Tag[] | FilterError> {
+	public async getTagByName(name: string): Promise<Tag[]> {
 		try {
 			return await this.broker.call("v1.tags.find", { query: { name: { $regex: name, $options: "i" } } }) as Tag[];
 		} catch (error) {
-			return {
-				name: "FilterError",
-				message: `${error.message}`,
-				filterType: "byName",
-			} as FilterError;
+			throw new DatabaseError(error.message || "Failed to get possible tags by name.", error.code || 500, this.name);
 		}
 	}
 }

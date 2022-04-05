@@ -2,7 +2,8 @@
 
 import {Context, Service, ServiceBroker, ServiceSchema} from "moleculer";
 import Connection from "../../mixins/db.mixin";
-import { MAX_PAGE_SIZE, PAGE_SIZE,RatingData, RatingEntry } from "../../shared";
+import { ErrorMixin } from "../../mixins/error_logging.mixin";
+import { AuthError, BaseError, DatabaseError, MAX_PAGE_SIZE, PAGE_SIZE,RatingData, RatingEntry } from "../../shared";
 import { RatingResponse, RatingOperations } from "../../types";
 
 export default class RatingService extends Service {
@@ -14,7 +15,7 @@ export default class RatingService extends Service {
 		this.parseServiceSchema(Service.mergeSchemas({
 			name: "rating",
             version: 1,
-            mixins: [this.DBConnection],
+            mixins: [this.DBConnection, ErrorMixin],
 			settings: {
 				idField: "id",
 				pageSize: PAGE_SIZE,
@@ -93,6 +94,25 @@ export default class RatingService extends Service {
 						return await this.removeRating(ctx.meta.user.id, ctx.params.recipeID);
 					},
 				},
+				/**
+				 * Get the rating of a user from a specific recipe.
+				 *
+				 * @method
+				 * @param {String} recipeID
+				 * @returns {Number}
+				 */
+				getRatingForUser: {
+					rest: {
+						path: "/getRatingForUser",
+						method: "POST",
+					},
+					params: {
+						recipeID: "string",
+					},
+					async handler(ctx): Promise<number> {
+						return await this.getRatingForUser(ctx.meta.user, ctx.params.recipeID);
+					},
+				},
 			},
 			events: {
 				/**
@@ -113,6 +133,14 @@ export default class RatingService extends Service {
 		}, schema));
 	}
 
+	public async getRatingForUser(userID: string, recipeID: string): Promise<number> {
+		if (!userID) {throw new AuthError("Unauthorized! No user logged in.", 401);}
+		const recipeRating = await this.getByRecipeID(recipeID);
+		const userRating = recipeRating.ratings.find(rating => rating.userID === userID);
+		if (!userRating) {throw new BaseError("User hasn't rated this recipe", 404);}
+		return userRating.rating;
+	}
+
 	public async removeRating(userID: string, recipeID: string): Promise<RatingResponse> {
 		const recipeRating = await this.getByRecipeID(recipeID);
 		if (!recipeRating) {
@@ -129,8 +157,12 @@ export default class RatingService extends Service {
 		this.logger.info(`Recipe[${recipeID}] removing rating from user (${userID})`);
 		recipeRating.ratings.splice(index, 1);
 		const newRecipeRating = this.calculateAvgRating(recipeRating);
-		await this.broker.call("v1.rating.update", newRecipeRating);
-		return { success: true, method: RatingOperations.REMOVE, recipeID, userID, msg: "Removed users rating from recipe" } as RatingResponse;
+		try {
+			await this.broker.call("v1.rating.update", newRecipeRating);
+			return { success: true, method: RatingOperations.REMOVE, recipeID, userID, msg: "Removed users rating from recipe" } as RatingResponse;
+		} catch (error) {
+			throw new DatabaseError(error.message || "Failed to update RatingData.", error.code || 500, this.name);
+		}
 	}
 
 	public async addRating(userID: string, recipeID: string, rating: number): Promise<RatingResponse> {
@@ -150,8 +182,12 @@ export default class RatingService extends Service {
 		}
 
 		const updatedRecipeRating = this.internalAddRating(recipeRating, userID, rating);
-		await this.broker.call("v1.rating.update", updatedRecipeRating);
-		return { success: true, method: RatingOperations.ADD, recipeID, userID, msg: "User rated recipe" } as RatingResponse;
+		try {
+			await this.broker.call("v1.rating.update", updatedRecipeRating);
+			return { success: true, method: RatingOperations.ADD, recipeID, userID, msg: "User rated recipe" } as RatingResponse;
+		} catch (error) {
+			throw new DatabaseError(error.message || "Failed to update RatingData.", error.code || 500, this.name);
+		}
 	}
 
 	public async updateRating(userID: string, recipeID: string, rating: number): Promise<RatingResponse> {
@@ -173,15 +209,23 @@ export default class RatingService extends Service {
 	private async internalUpdateRating(data: RatingData, index: number, rating: number, recipeID: string, userID: string): Promise<RatingResponse> {
 		this.logger.info(`Recipe[${recipeID}] Updating rating for user (${userID})`);
 		const updatedRating = this.replaceRating(data, index, rating);
-		await this.broker.call("v1.rating.update", updatedRating);
-		return { success: true, method: RatingOperations.UPDATE, recipeID, userID, msg: `Updated recipe new avgRating of: ${updatedRating.avgRating}` } as RatingResponse;
+		try {
+			await this.broker.call("v1.rating.update", updatedRating);
+			return { success: true, method: RatingOperations.UPDATE, recipeID, userID, msg: `Updated recipe new avgRating of: ${updatedRating.avgRating}` } as RatingResponse;
+		} catch (error) {
+			throw new DatabaseError(error.message || "Failed to update RatingData.", error.code || 500, this.name);
+		}
 	}
 
 	private async createNewEntry(recipeID: string): Promise<RatingData> {
 		this.logger.info(`Recipe[${recipeID}] Creating RatingData`);
-		const data = await this.broker.call("v1.rating.create", { recipeID, ratings: new Array<RatingEntry>(), avgRating: null }) as RatingData;
-		this.broker.emit("recipe.first_rating", { recipeID, ratingID: data.id });
-		return data;
+		try {
+			const data = await this.broker.call("v1.rating.create", { recipeID, ratings: new Array<RatingEntry>(), avgRating: null }) as RatingData;
+			this.broker.emit("recipe.first_rating", { recipeID, ratingID: data.id });
+			return data;
+		} catch (error) {
+			throw new DatabaseError(error.message || "Failed to create new RatingData.", error.code || 500, this.name);
+		}
 	}
 
 	private replaceRating(data: RatingData, index: number, rating: number): RatingData {
@@ -208,8 +252,12 @@ export default class RatingService extends Service {
 
 	private async getByRecipeID(recipeID: string): Promise<RatingData | null> {
 		this.logger.info(`Trying to load RatingData for recipeID: ${recipeID}`);
-		const possibleRating = (await this.broker.call("v1.rating.find", { query: { recipeID }}) as RatingData[])[0];
-		if (possibleRating) {return possibleRating;}
-		else {return null;}
+		try {
+			const possibleRating = (await this.broker.call("v1.rating.find", { query: { recipeID }}) as RatingData[])[0];
+			if (possibleRating) {return possibleRating;}
+			else {return null;}
+		} catch (error) {
+			throw new DatabaseError(error.message || "Error while fetching RatingData by ID.", error.code || 500, this.name);
+		}
 	}
 }
