@@ -1,8 +1,8 @@
 "use strict";
 
-import { Service, ServiceBroker} from "moleculer";
+import { Context, Service, ServiceBroker} from "moleculer";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
-import { BaseError, DatabaseError, RatingData, RecipeData } from "../../shared";
+import { BaseError, ConvertRatingIDtoRatingParams, ConvertRecipeParams, ConvertRecipesParams, ConvertTagsToIDParams, ConvertTagsToNameParams, DatabaseError, RatingData, RecipeData } from "../../shared";
 import { Units, Recipe, Tag, User } from "../../types";
 
 export default class IDConverterService extends Service {
@@ -35,7 +35,7 @@ export default class IDConverterService extends Service {
 							updateTimestamp: { type: "date", convert: true },
 						} },
 					},
-					async handler(ctx): Promise<Recipe> {
+					async handler(ctx: Context<ConvertRecipeParams>): Promise<Recipe> {
 						return await this.convertRecipe(ctx.params.recipe);
 					},
 				},
@@ -61,7 +61,7 @@ export default class IDConverterService extends Service {
 							updateTimestamp: { type: "date", convert: true },
 						}} },
 					},
-					async handler(ctx): Promise<Recipe> {
+					async handler(ctx: Context<ConvertRecipesParams>): Promise<Recipe> {
 						return await this.convertRecipes(ctx.params.recipes);
 					},
 				},
@@ -76,7 +76,7 @@ export default class IDConverterService extends Service {
 					params: {
 						tagNames: { type: "array", items: "string" },
 					},
-					async handler(ctx): Promise<string[]> {
+					async handler(ctx: Context<ConvertTagsToIDParams>): Promise<string[]> {
 						return await this.parseTagsToID(ctx.params.tagNames);
 					},
 				},
@@ -91,7 +91,7 @@ export default class IDConverterService extends Service {
 					params: {
  						tagIDs: { type: "array", items: "string" },
 					},
-					async handler(ctx): Promise<string[]> {
+					async handler(ctx: Context<ConvertTagsToNameParams>): Promise<string[]> {
 						return await this.parseTagsToName(ctx.params.tagIDs);
 					},
 				},
@@ -106,7 +106,7 @@ export default class IDConverterService extends Service {
 					params: {
 						ratingID: "string",
 					},
-					async handler(ctx): Promise<number> {
+					async handler(ctx: Context<ConvertRatingIDtoRatingParams>): Promise<number> {
 						return await this.getRatingForRatingID(ctx.params.ratingID);
 					},
 				},

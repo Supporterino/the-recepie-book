@@ -1,9 +1,9 @@
 "use strict";
 
-import {Service, ServiceBroker, ServiceSchema} from "moleculer";
+import {Context, Service, ServiceBroker, ServiceSchema} from "moleculer";
 import Connection from "../../mixins/db.mixin";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
-import { DatabaseError, MAX_PAGE_SIZE, PAGE_SIZE } from "../../shared";
+import { DatabaseError, IsLegitUserParams, MAX_PAGE_SIZE, OwnsRecipeParams, PAGE_SIZE, ServiceMeta } from "../../shared";
 import { Recipe, User } from "../../types";
 
 export default class UserService extends Service {
@@ -43,11 +43,11 @@ export default class UserService extends Service {
 				 */
 				isLegitUser: {
 					params: {
-						id: "string",
+						userID: "string",
 						email: { type: "email" },
 					},
-					async handler(ctx): Promise<boolean> {
-						return await this.checkAuthentic(ctx.params.id, ctx.params.email);
+					async handler(ctx: Context<IsLegitUserParams>): Promise<boolean> {
+						return await this.checkAuthentic(ctx.params.userID, ctx.params.email);
 					},
 				},
 				/**
@@ -66,8 +66,8 @@ export default class UserService extends Service {
 					params: {
 						recipeID: "string",
 					},
-					async handler(ctx): Promise<boolean> {
-						return await this.checkAuthor(ctx.meta.user.userID, ctx.params.recipeID);
+					async handler(ctx: Context<OwnsRecipeParams, ServiceMeta>): Promise<boolean> {
+						return await this.checkAuthor(ctx.meta.user.id, ctx.params.recipeID);
 					},
 				},
 			},

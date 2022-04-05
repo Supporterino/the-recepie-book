@@ -1,9 +1,9 @@
 "use strict";
 
-import {Service, ServiceBroker, ServiceSchema} from "moleculer";
+import {Context, Service, ServiceBroker, ServiceSchema} from "moleculer";
 import Connection from "../../mixins/db.mixin";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
-import { BaseError, DatabaseError, MAX_PAGE_SIZE, PAGE_SIZE } from "../../shared";
+import { BaseError, CheckForTagParams, DatabaseError, GetByStringParams, MAX_PAGE_SIZE, PAGE_SIZE } from "../../shared";
 import { Tag } from "../../types";
 
 export default class TagsService extends Service {
@@ -44,7 +44,7 @@ export default class TagsService extends Service {
 					params: {
 						name: {type: "string", min: 2},
 					},
-					async handler(ctx): Promise<Tag[]> {
+					async handler(ctx: Context<GetByStringParams>): Promise<Tag[]> {
 						return await this.getTagByName(ctx.params.name);
 					},
 				},
@@ -63,7 +63,7 @@ export default class TagsService extends Service {
 					params: {
 						name: {type: "string", min: 2},
 					},
-					async handler(ctx): Promise<string> {
+					async handler(ctx: Context<CheckForTagParams>): Promise<string> {
 						return await this.checkTagAndGetID(ctx.params.name);
 					},
 				},

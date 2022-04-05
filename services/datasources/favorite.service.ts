@@ -3,7 +3,8 @@
 import {Context, Service, ServiceBroker, ServiceSchema} from "moleculer";
 import Connection from "../../mixins/db.mixin";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
-import { BaseError, DatabaseError, FavoriteData, FetchError, FetchTarget, MAX_PAGE_SIZE, PAGE_SIZE } from "../../shared";
+import { BaseError, DatabaseError, FavoriteData, FetchError, FetchTarget, MAX_PAGE_SIZE, PAGE_SIZE, RecipeDeletionParams, ServiceMeta } from "../../shared";
+import { AddFavoriteParams, GetFavoriteParams, RemoveFavoriteParams } from "../../shared/services/favorite.types";
 import { Recipe, FavoriteResponse } from "../../types";
 
 export default class FavoriteService extends Service {
@@ -42,7 +43,7 @@ export default class FavoriteService extends Service {
 						path: "/getOwnFavorties",
 						method: "GET",
 					},
-					async handler(ctx): Promise<Recipe[]> {
+					async handler(ctx: Context<null, ServiceMeta>): Promise<Recipe[]> {
 						return await this.getFavorites(ctx.meta.user.id);
 					},
 				},
@@ -59,10 +60,10 @@ export default class FavoriteService extends Service {
 						method: "POST",
 					},
 					params: {
-						id: "string",
+						userID: "string",
 					},
-					async handler(ctx): Promise<Recipe[]> {
-						return await this.getFavorites(ctx.params.id);
+					async handler(ctx: Context<GetFavoriteParams, ServiceMeta>): Promise<Recipe[]> {
+						return await this.getFavorites(ctx.params.userID);
 					},
 				},
 				/**
@@ -80,7 +81,7 @@ export default class FavoriteService extends Service {
 					params: {
 						recipeID: "string",
 					},
-					async handler(ctx): Promise<FavoriteResponse> {
+					async handler(ctx: Context<AddFavoriteParams, ServiceMeta>): Promise<FavoriteResponse> {
 						return await this.addFavorite(ctx.meta.user.id, ctx.params.recipeID);
 					},
 				},
@@ -99,7 +100,7 @@ export default class FavoriteService extends Service {
 					params: {
 						recipeID: "string",
 					},
-					async handler(ctx): Promise<FavoriteResponse> {
+					async handler(ctx: Context<RemoveFavoriteParams, ServiceMeta>): Promise<FavoriteResponse> {
 						return await this.removeFavorite(ctx.meta.user.id, ctx.params.recipeID);
 					},
 				},
@@ -114,7 +115,7 @@ export default class FavoriteService extends Service {
 					params: {
 						recipeID: "string",
 					},
-					handler: async (ctx: Context<any>) => {
+					handler: async (ctx: Context<RecipeDeletionParams>) => {
 						const userIds = (await ctx.call("v1.favorite.find", { fields: "userid" }) as FavoriteData[]).map(e => e.userid);
 						for (const id of userIds) {
 							this.removeFavorite(id, ctx.params.recipeID);
@@ -131,7 +132,7 @@ export default class FavoriteService extends Service {
 		for (const id of favorites) {
 			try {
 				this.logger.info(`User[${userID}] Getting recipe for recipe id: ${id}`);
-				out.push(await this.broker.call("v1.recipe-provider.getById", { id }));
+				out.push(await this.broker.call("v1.recipe-provider.getById", { recipeID: id }));
 			} catch (error) {
 				if (error instanceof BaseError) {throw error;}
 				else {

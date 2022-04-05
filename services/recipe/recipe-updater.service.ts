@@ -1,8 +1,8 @@
 "use strict";
 
-import { Service, ServiceBroker} from "moleculer";
+import { Context, Service, ServiceBroker} from "moleculer";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
-import { AuthError, BaseError, RecipeData } from "../../shared";
+import { AuthError, BaseError, RecipeData, ServiceMeta } from "../../shared";
 import { UpdateResponse, Units, UpdateData } from "../../types";
 
 export default class RecipeUpdaterService extends Service {
@@ -37,7 +37,7 @@ export default class RecipeUpdaterService extends Service {
 						steps: {type: "array", items: "string", optional: true},
 						tags: {type: "array", items: "string", optional: true},
 					},
-					async handler(ctx): Promise<UpdateResponse> {
+					async handler(ctx: Context<UpdateData, ServiceMeta>): Promise<UpdateResponse> {
 						return await this.updateRecipe(ctx.params, ctx.meta.user.id);
 					},
 				},
@@ -45,7 +45,7 @@ export default class RecipeUpdaterService extends Service {
 		});
 	}
 
-	public async updateRecipe(updatedRecipe: any, userID: string): Promise<UpdateResponse> {
+	public async updateRecipe(updatedRecipe: UpdateData, userID: string): Promise<UpdateResponse> {
 		if (!(await this.broker.call("v1.user.ownsRecipe", { userID, recipeID: updatedRecipe.id }) as boolean)) {throw new AuthError("User doesn't own this recipe.", 403);}
 
 		const updateData: UpdateData = { ...updatedRecipe };
