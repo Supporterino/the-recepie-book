@@ -1,8 +1,8 @@
 "use strict";
 
-import { Service, ServiceBroker} from "moleculer";
+import { Context, Service, ServiceBroker} from "moleculer";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
-import { AuthError } from "../../shared";
+import { AuthError, RecipeDeletionParams, ServiceMeta } from "../../shared";
 import { DeletionResponse } from "../../types";
 
 export default class RecipeDeletionService extends Service {
@@ -28,7 +28,7 @@ export default class RecipeDeletionService extends Service {
 					params: {
 						recipeID: "string",
 					},
-					async handler(ctx): Promise<DeletionResponse> {
+					async handler(ctx: Context<RecipeDeletionParams, ServiceMeta>): Promise<DeletionResponse> {
 						return await this.delete(ctx.params.recipeID, ctx.meta.user.id);
 					},
 				},

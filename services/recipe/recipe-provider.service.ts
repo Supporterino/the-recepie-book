@@ -2,7 +2,7 @@
 
 import { Context, Service, ServiceBroker} from "moleculer";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
-import { BaseError, DatabaseError, FilterError, FilterType, RatingData, RecipeData } from "../../shared";
+import { BaseError, DatabaseError, FilterError, FilterParams, FilterType, GetByIdParams, GetByMinRatingParams, GetByNameParams, GetByTagsParams, RatingData, RecipeData } from "../../shared";
 import { Recipe, Tag } from "../../types";
 
 
@@ -18,7 +18,7 @@ export default class RecipeProviderService extends Service {
 				 * Returns a recipe by its ID inside the DB
 				 *
 				 * @method
-				 * @param {String} id - The id of the recipe to return
+				 * @param {String} recipeID - The id of the recipe to return
 				 * @returns {RecipeData} - The recipe as JSON string
 				 */
 				getById: {
@@ -27,10 +27,10 @@ export default class RecipeProviderService extends Service {
 						method: "POST",
 					},
 					params: {
-						id: {type: "string", min: 2},
+						recipeID: {type: "string", min: 2},
 					},
-					async handler(ctx): Promise<RecipeData> {
-						return await this.getRecipeByID(ctx.params.id);
+					async handler(ctx: Context<GetByIdParams>): Promise<RecipeData> {
+						return await this.getRecipeByID(ctx.params.recipeID);
 					},
 				},
 				/**
@@ -48,7 +48,7 @@ export default class RecipeProviderService extends Service {
 					params: {
 						name: {type: "string", min: 2},
 					},
-					async handler(ctx): Promise<RecipeData[]> {
+					async handler(ctx: Context<GetByNameParams>): Promise<RecipeData[]> {
 						return await this.getRecipesByName(ctx.params.name);
 					},
 				},
@@ -69,7 +69,7 @@ export default class RecipeProviderService extends Service {
 						tags: {type: "array", min: 1, items: "string"},
 						intersect: {type: "boolean", optional: true, default: false},
 					},
-					async handler(ctx): Promise<RecipeData[]> {
+					async handler(ctx: Context<GetByTagsParams>): Promise<RecipeData[]> {
 						return await this.getRecipesByTags(ctx.params.tags, ctx.params.intersect);
 					},
 				},
@@ -88,7 +88,7 @@ export default class RecipeProviderService extends Service {
 					params: {
 						rating: {type: "number"},
 					},
-					async handler(ctx): Promise<RecipeData[]> {
+					async handler(ctx: Context<GetByMinRatingParams>): Promise<RecipeData[]> {
 						return await this.getRecipesByRating(ctx.params.rating);
 					},
 				},
@@ -111,7 +111,7 @@ export default class RecipeProviderService extends Service {
 						ratingMin: {type: "number"},
 						tags: {type: "array", items:"string"},
 					},
-					async handler(ctx): Promise<RecipeData[]> {
+					async handler(ctx: Context<FilterParams>): Promise<RecipeData[]> {
 						return await this.filterRecipes(ctx.params.text, ctx.params.ratingMin, ctx.params.tags);
 					},
 				},
@@ -126,7 +126,7 @@ export default class RecipeProviderService extends Service {
 						path: "/featuredRecipes",
 						method: "GET",
 					},
-					async handler(ctx): Promise<RecipeData[]> {
+					async handler(ctx: Context<null>): Promise<RecipeData[]> {
 						return await this.getFeatured();
 					},
 				},

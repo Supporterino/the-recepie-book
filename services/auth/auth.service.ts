@@ -116,7 +116,7 @@ export default class AuthService extends Service {
 				resolve(decoded);
 			});
 		}).then(async (decoded: Auth) => {
-			if (decoded.id && await this.broker.call("v1.user.isLegitUser", { id: decoded.id, email: decoded.email })) {
+			if (decoded.id && await this.broker.call("v1.user.isLegitUser", { userID: decoded.id, email: decoded.email })) {
 				return decoded;
 			}
 		});

@@ -3,7 +3,7 @@
 import {Context, Service, ServiceBroker, ServiceSchema} from "moleculer";
 import Connection from "../../mixins/db.mixin";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
-import { MAX_PAGE_SIZE, PAGE_SIZE } from "../../shared";
+import { FirstRatingParams, MAX_PAGE_SIZE, PAGE_SIZE, RecipeDeletionParams } from "../../shared";
 import { Units } from "../../types";
 
 export default class DataStoreService extends Service {
@@ -50,7 +50,7 @@ export default class DataStoreService extends Service {
 						recipeID: "string",
 						ratingID: "string",
 					},
-					handler: (ctx: Context<any>) => {
+					handler: (ctx: Context<FirstRatingParams>) => {
 						ctx.call("v1.data-store.update", { id: ctx.params.recipeID, rating: ctx.params.ratingID });
 					},
 				},
@@ -58,7 +58,7 @@ export default class DataStoreService extends Service {
 					params: {
 						recipeID: "string",
 					},
-					handler: (ctx: Context<any>) => {
+					handler: (ctx: Context<RecipeDeletionParams>) => {
 						ctx.call("v1.data-store.remove", { id: ctx.params.recipeID });
 					},
 				},

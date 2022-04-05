@@ -1,8 +1,8 @@
 "use strict";
 
-import {Service, ServiceBroker} from "moleculer";
+import {Context, Service, ServiceBroker} from "moleculer";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
-import { BaseError, RecipeData } from "../../shared";
+import { BaseError, RecipeData, ServiceMeta } from "../../shared";
 import { CreationData, CreationResponse, Units } from "../../types";
 
 export default class RecipeCreationService extends Service {
@@ -37,7 +37,7 @@ export default class RecipeCreationService extends Service {
 						steps: {type: "array", items: "string"},
 						tags: {type: "array", items: "string"},
 					},
-					async handler(ctx): Promise<CreationResponse> {
+					async handler(ctx: Context<CreationData, ServiceMeta>): Promise<CreationResponse> {
 						return await this.createRecipe(ctx.params, ctx.meta.user.id);
 					},
 				},
@@ -45,23 +45,33 @@ export default class RecipeCreationService extends Service {
 		});
 	}
 
-	public async createRecipe(params: any, userID: string): Promise<CreationResponse> {
+	public async createRecipe(params: CreationData, userID: string): Promise<CreationResponse> {
 		const now = new Date();
-		const creationData: CreationData = { ...params };
+		const recipeData = this.creationDataToRecipeData(params, now, userID);
 
 		try {
-			creationData.tags = await this.broker.call("v1.id-converter.convertTagsToID", { tagNames: params.tags });
-			(creationData as RecipeData).creationTimestamp = now;
-			(creationData as RecipeData).updateTimestamp = now;
-			(creationData as RecipeData).owner = userID;
-			this.logger.info(`Creating recipe (${params.name}) by ${params.owner}`);
-			const recipe = await this.broker.call("v1.data-store.create", (creationData as RecipeData)) as RecipeData;
+			recipeData.tags = await this.broker.call("v1.id-converter.convertTagsToID", { tagNames: recipeData.tags });
+			this.logger.info(`Creating recipe (${recipeData.name}) by ${recipeData.owner}`);
+			const recipe = await this.broker.call("v1.data-store.create", recipeData) as RecipeData;
 			return {
 				recipeID: `${recipe.id}`,
-				msg: `Saved recipe (${params.name}) by ${params.owner}`,
+				msg: `Saved recipe (${recipe.name}) by ${recipe.owner}`,
 			} as CreationResponse;
 		} catch (error) {
 			if (error instanceof BaseError) {throw error;}
 		}
+	}
+
+	private creationDataToRecipeData(data: CreationData, date: Date, userID: string): RecipeData {
+		return {
+			name: data.name,
+			description: data.description,
+			ingredients: data.ingredients,
+			steps: data.steps,
+			tags: data.tags,
+			creationTimestamp: date,
+			updateTimestamp: date,
+			owner: userID,
+		} as RecipeData;
 	}
 }

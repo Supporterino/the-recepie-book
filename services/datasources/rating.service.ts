@@ -1,9 +1,9 @@
 "use strict";
 
-import {Context, Service, ServiceBroker, ServiceSchema} from "moleculer";
+import {Context, Service, ServiceBroker, ServiceMethods, ServiceSchema} from "moleculer";
 import Connection from "../../mixins/db.mixin";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
-import { AuthError, BaseError, DatabaseError, MAX_PAGE_SIZE, PAGE_SIZE,RatingData, RatingEntry } from "../../shared";
+import { AddRatingParams, AuthError, BaseError, DatabaseError, GetRatingForUserParams, MAX_PAGE_SIZE, PAGE_SIZE,RatingData, RatingEntry, RecipeDeletionParams, RemoveRatingParams, ServiceMeta, UpdateRatingParams } from "../../shared";
 import { RatingResponse, RatingOperations } from "../../types";
 
 export default class RatingService extends Service {
@@ -50,7 +50,7 @@ export default class RatingService extends Service {
 						recipeID: "string",
 						rating: "number",
 					},
-					async handler(ctx): Promise<RatingResponse> {
+					async handler(ctx: Context<AddRatingParams, ServiceMeta>): Promise<RatingResponse> {
 						return await this.addRating(ctx.meta.user.id, ctx.params.recipeID, ctx.params.rating);
 					},
 				},
@@ -71,7 +71,7 @@ export default class RatingService extends Service {
 						recipeID: "string",
 						rating: "number",
 					},
-					async handler(ctx): Promise<RatingResponse> {
+					async handler(ctx: Context<UpdateRatingParams, ServiceMeta>): Promise<RatingResponse> {
 						return await this.updateRating(ctx.meta.user.id, ctx.params.recipeID, ctx.params.rating);
 					},
 				},
@@ -90,7 +90,7 @@ export default class RatingService extends Service {
 					params: {
 						recipeID: "string",
 					},
-					async handler(ctx): Promise<RatingResponse> {
+					async handler(ctx: Context<RemoveRatingParams, ServiceMeta>): Promise<RatingResponse> {
 						return await this.removeRating(ctx.meta.user.id, ctx.params.recipeID);
 					},
 				},
@@ -109,8 +109,8 @@ export default class RatingService extends Service {
 					params: {
 						recipeID: "string",
 					},
-					async handler(ctx): Promise<number> {
-						return await this.getRatingForUser(ctx.meta.user, ctx.params.recipeID);
+					async handler(ctx: Context<GetRatingForUserParams, ServiceMeta>): Promise<number> {
+						return await this.getRatingForUser(ctx.meta.user.id, ctx.params.recipeID);
 					},
 				},
 			},
@@ -124,7 +124,7 @@ export default class RatingService extends Service {
 					params: {
 						recipeID: "string",
 					},
-					handler: async (ctx: Context<any>) => {
+					handler: async (ctx: Context<RecipeDeletionParams>) => {
 						const id = await this.getByRecipeID(ctx.params.recipeID);
 						ctx.call("v1.rating.remove", { id });
 					},
