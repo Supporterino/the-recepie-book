@@ -2,6 +2,7 @@
 
 import {Context, Service, ServiceBroker, ServiceSchema} from "moleculer";
 import Connection from "../../mixins/db.mixin";
+import { ErrorMixin } from "../../mixins/error_logging.mixin";
 import { MAX_PAGE_SIZE, PAGE_SIZE } from "../../shared";
 import { Units } from "../../types";
 
@@ -14,7 +15,7 @@ export default class DataStoreService extends Service {
 		this.parseServiceSchema(Service.mergeSchemas({
 			name: "data-store",
             version: 1,
-            mixins: [this.DBConnection],
+            mixins: [this.DBConnection, ErrorMixin],
 			settings: {
 				idField: "id",
 				pageSize: PAGE_SIZE,

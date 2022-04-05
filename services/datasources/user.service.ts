@@ -2,7 +2,8 @@
 
 import {Service, ServiceBroker, ServiceSchema} from "moleculer";
 import Connection from "../../mixins/db.mixin";
-import { MAX_PAGE_SIZE, PAGE_SIZE } from "../../shared";
+import { ErrorMixin } from "../../mixins/error_logging.mixin";
+import { DatabaseError, MAX_PAGE_SIZE, PAGE_SIZE } from "../../shared";
 import { Recipe, User } from "../../types";
 
 export default class UserService extends Service {
@@ -14,7 +15,7 @@ export default class UserService extends Service {
 		this.parseServiceSchema(Service.mergeSchemas({
 			name: "user",
             version: 1,
-            mixins: [this.DBConnection],
+            mixins: [this.DBConnection, ErrorMixin],
 			settings: {
 				idField: "id",
 				pageSize: PAGE_SIZE,
@@ -58,12 +59,15 @@ export default class UserService extends Service {
 				 * @returns {boolean}
 				 */
 				ownsRecipe: {
+					rest: {
+						method: "POST",
+						path: "/ownsRecipe",
+					},
 					params: {
-						userID: "string",
 						recipeID: "string",
 					},
 					async handler(ctx): Promise<boolean> {
-						return await this.checkAuthor(ctx.params.userID, ctx.params.recipeID);
+						return await this.checkAuthor(ctx.meta.user.userID, ctx.params.recipeID);
 					},
 				},
 			},
@@ -71,9 +75,13 @@ export default class UserService extends Service {
 	}
 
 	public async checkAuthentic(id: string, email: string): Promise<boolean> {
-		const user = await this.broker.call("v1.user.get", { id }) as User;
-		if (user && user.email === email) {return true;}
-		else {return false;}
+		try {
+			const user = await this.broker.call("v1.user.get", { id }) as User;
+			if (user && user.email === email) {return true;}
+			else {return false;}
+		} catch (error) {
+			throw new DatabaseError(error.message || "Failed to get user by ID.", error.code || 500, this.name);
+		}
 	}
 
 	public async checkAuthor(userID: string, recipeID: string): Promise<boolean> {

@@ -1,8 +1,9 @@
 "use strict";
 
 import { Context, Service, ServiceBroker} from "moleculer";
-import { RatingData, RecipeData } from "../../shared/interfaces";
-import { Recipe, FilterError, Tag } from "../../types";
+import { ErrorMixin } from "../../mixins/error_logging.mixin";
+import { BaseError, DatabaseError, FilterError, FilterType, RatingData, RecipeData } from "../../shared";
+import { Recipe, Tag } from "../../types";
 
 
 export default class RecipeProviderService extends Service {
@@ -11,6 +12,7 @@ export default class RecipeProviderService extends Service {
 		this.parseServiceSchema({
 			name: "recipe-provider",
             version: 1,
+			mixins: [ErrorMixin],
 			actions:{
 				/**
 				 * Returns a recipe by its ID inside the DB
@@ -27,7 +29,7 @@ export default class RecipeProviderService extends Service {
 					params: {
 						id: {type: "string", min: 2},
 					},
-					async handler(ctx): Promise<RecipeData | FilterError> {
+					async handler(ctx): Promise<RecipeData> {
 						return await this.getRecipeByID(ctx.params.id);
 					},
 				},
@@ -46,7 +48,7 @@ export default class RecipeProviderService extends Service {
 					params: {
 						name: {type: "string", min: 2},
 					},
-					async handler(ctx): Promise<RecipeData[] | FilterError> {
+					async handler(ctx): Promise<RecipeData[]> {
 						return await this.getRecipesByName(ctx.params.name);
 					},
 				},
@@ -67,7 +69,7 @@ export default class RecipeProviderService extends Service {
 						tags: {type: "array", min: 1, items: "string"},
 						intersect: {type: "boolean", optional: true, default: false},
 					},
-					async handler(ctx): Promise<RecipeData[] | FilterError> {
+					async handler(ctx): Promise<RecipeData[]> {
 						return await this.getRecipesByTags(ctx.params.tags, ctx.params.intersect);
 					},
 				},
@@ -86,7 +88,7 @@ export default class RecipeProviderService extends Service {
 					params: {
 						rating: {type: "number"},
 					},
-					async handler(ctx): Promise<RecipeData[] | FilterError> {
+					async handler(ctx): Promise<RecipeData[]> {
 						return await this.getRecipesByRating(ctx.params.rating);
 					},
 				},
@@ -109,7 +111,7 @@ export default class RecipeProviderService extends Service {
 						ratingMin: {type: "number"},
 						tags: {type: "array", items:"string"},
 					},
-					async handler(ctx): Promise<RecipeData[] | FilterError> {
+					async handler(ctx): Promise<RecipeData[]> {
 						return await this.filterRecipes(ctx.params.text, ctx.params.ratingMin, ctx.params.tags);
 					},
 				},
@@ -131,7 +133,7 @@ export default class RecipeProviderService extends Service {
 			},
 			hooks: {
 				after: {
-					"*"(ctx, res): Promise<Recipe | Recipe[] | FilterError> {
+					"*"(ctx, res): Promise<Recipe | Recipe[]> {
 						return this.recipeDataConversion(ctx, res);
 					},
 				},
@@ -139,47 +141,47 @@ export default class RecipeProviderService extends Service {
 		});
 	}
 
-	public async recipeDataConversion(ctx: Context<any, any>, res: RecipeData[] | RecipeData | FilterError): Promise<Recipe | Recipe[] | FilterError> {
-		if (res instanceof FilterError) {return res;}
+	public async recipeDataConversion(ctx: Context<any, any>, res: RecipeData[] | RecipeData): Promise<Recipe | Recipe[]> {
 		if (res.constructor.name === "Array") {return await this.broker.call("v1.id-converter.convertRecipes", { recipes: res }) as Recipe[];}
 		else {return await this.broker.call("v1.id-converter.convertRecipe", { recipe: res }) as Recipe;}
-
 	}
 
 	public async getFeatured(): Promise<RecipeData[]> {
-		// Develop cool idea to get good recipes for requesting user
-		const count = await this.broker.call("v1.data-store.count");
-		if (count <= 25) {
-			return await this.broker.call("v1.data-store.find");
-		} else {
-			return await this.broker.call("v1.data-store.find", { limit: 25 });
+		try {
+			// Develop cool idea to get good recipes for requesting user
+			const count = await this.broker.call("v1.data-store.count");
+			if (count <= 25) {
+				return await this.broker.call("v1.data-store.find");
+			} else {
+				return await this.broker.call("v1.data-store.find", { limit: 25 });
+			}
+		} catch (error) {
+			throw new DatabaseError(error.message || "Failed to fetch featured recipes.", error.code || 500, "data-store");
 		}
 	}
 
-	public async filterRecipes(name: string, rating: number, tags: string[]): Promise<RecipeData[] | FilterError> {
+	public async filterRecipes(name: string, rating: number, tags: string[]): Promise<RecipeData[]> {
 		this.logger.info("Filtering with following settings:", name, rating, tags);
 		if (name === "" && tags.length === 0 && rating === 0) {return await this.getFeatured();}
 		else if (name !== "" && tags.length === 0) {return await this.getByNameAndRating(name, rating);}
 		else if (name !== "" && tags.length > 0) {return await this.getByNameAndRatingAndTags(name, rating, tags);}
 		else if (name === "" && tags.length === 0) {return await this.broker.call("v1.recipe-provider.getByMinRating", { rating });}
 		else if (name === "" && tags.length > 0) {return await this.getByRatingAndTags(rating, tags);}
-		else {return {
-			name: "FilterError",
-			message: "No valid filter provided.",
-		} as FilterError;}
+		else {
+			throw new FilterError("The provided filters do not match any allowed combination.", 400, FilterType.FULL);
+		}
 	}
 
-	public async getRecipesByRating(rating: number): Promise<RecipeData[] | FilterError> {
+	public async getRecipesByRating(rating: number): Promise<RecipeData[]> {
 		this.logger.info(`Fetching recipes with rating over ${rating}`);
 		try {
 			const possibleIDs = await this.getPossibleIDsForRating(rating);
 			return await this.broker.call("v1.data-store.get", { id: possibleIDs }) as RecipeData[];
 		} catch (error) {
-			return {
-				name: "FilterError",
-				message: `${error.message}`,
-				filterType: "byRating",
-			} as FilterError;
+			if (error instanceof BaseError) {throw error;}
+			else {
+				throw new FilterError(error.message || "Failed to fetch RecipeData from data-store", error.code || 500, FilterType.RATING);
+			}
 		}
 	}
 
@@ -197,91 +199,95 @@ export default class RecipeProviderService extends Service {
 		return  out;
 	}
 
-	public async getRecipesByName(name: string): Promise<RecipeData[] | FilterError> {
+	public async getRecipesByName(name: string): Promise<RecipeData[]> {
 		this.logger.info(`Fetching recipes with name which includes: ${name}`);
 		try {
 			return await this.broker.call("v1.data-store.find", { query: { name: { $regex: name, $options: "i" } } }) as RecipeData[];
 		} catch (error) {
-			return {
-				name: "FilterError",
-				message: `${error.message}`,
-				filterType: "byName",
-			} as FilterError;
+			throw new FilterError(error.message || "Failed to fetch RecipeData from data-store", error.code || 500, FilterType.NAME);
 		}
 	}
 
-	public async getRecipeByID(id: string): Promise<RecipeData | FilterError> {
+	public async getRecipeByID(id: string): Promise<RecipeData> {
 		this.logger.info(`Fetching recipe with ID: ${id}`);
 		try {
 			return  await this.broker.call("v1.data-store.get", { id }) as RecipeData;
 		} catch (error) {
-			return {
-				name: "FilterError",
-				message: `${error.message}`,
-				filterType: "byID",
-			} as FilterError;
+			throw new DatabaseError(error.message || "Failed to fetch RecipeData by ID.", error.code || 500, "data-store");
 		}
 	}
 
-	private async getByNameAndRating(name: string, rating: number): Promise<RecipeData[] | FilterError> {
+	private async getByNameAndRating(name: string, rating: number): Promise<RecipeData[]> {
 		this.logger.debug(`Fetching recipe with Name: ${name} and rating over: ${rating}`);
 		try {
 			const possibleIDs = await this.getPossibleIDsForRating(rating);
 			return  await this.broker.call("v1.data-store.find", { query: { id: { $in: possibleIDs }, name: { $regex: name, $options: "i" } } }) as RecipeData[];
 		} catch (error) {
-			return {
-				name: "FilterError",
-				message: `${error.message}`,
-				filterType: "byNameAndRating",
-			} as FilterError;
+			if (error instanceof BaseError) {throw error;}
+			else {
+				throw new FilterError(error.message || "Failed to fetch RecipeData from data-store", error.code || 500, FilterType.RATING_AND_NAME);
+			}
 		}
 	}
 
-	private async getByNameAndRatingAndTags(name: string, rating: number, tagNames: string[]): Promise<RecipeData[] | FilterError> {
+	private async getByNameAndRatingAndTags(name: string, rating: number, tagNames: string[]): Promise<RecipeData[]> {
 		this.logger.debug(`Fetching recipe with Name: ${name} and rating over: ${rating} and tags: ${tagNames}`);
 		try {
 			const [tagIDs, possibleIDs] = await Promise.all([this.convertTagsInIDs(tagNames), this.getPossibleIDsForRating(rating)]);
 			return  await this.broker.call("v1.data-store.find", { query: { id: { $in: possibleIDs }, name: { $regex: name, $options: "i" }, tags: { $all: tagIDs } } }) as RecipeData[];
 		} catch (error) {
-			return {
-				name: "FilterError",
-				message: `${error.message}`,
-				filterType: "byNameAndRatingAndTags",
-			} as FilterError;
+			if (error instanceof BaseError) {throw error;}
+			else {
+				throw new FilterError(error.message || "Failed to fetch RecipeData from data-store", error.code || 500, FilterType.RATING_AND_NAME_AND_TAGS);
+			}
 		}
 	}
 
-	private async getByRatingAndTags(rating: number, tagNames: string[]): Promise<RecipeData[] | FilterError> {
+	private async getByRatingAndTags(rating: number, tagNames: string[]): Promise<RecipeData[]> {
 		this.logger.debug(`Fetching recipe with rating over: ${rating} and tags: ${tagNames}`);
 		try {
 			const [tagIDs, possibleIDs] = await Promise.all([this.convertTagsInIDs(tagNames), this.getPossibleIDsForRating(rating)]);
 			return  await this.broker.call("v1.data-store.find", { query: { id: { $in: possibleIDs }, tags: { $all: tagIDs } } }) as RecipeData[];
 		} catch (error) {
-			return {
-				name: "FilterError",
-				message: `${error.message}`,
-				filterType: "byRatingAndTags",
-			} as FilterError;
+			if (error instanceof BaseError) {throw error;}
+			else {
+				throw new FilterError(error.message || "Failed to fetch RecipeData from data-store", error.code || 500, FilterType.RATING_AND_TAGS);
+			}
 		}
 	}
 
 	private async getPossibleIDsForRating(rating: number): Promise<string[]> {
-		this.logger.debug(`[Provider] Getting possible ids for rating > ${rating}`);
-		return (await this.broker.call("v1.rating.find", { query: { avgRating: { $gte: rating } } }) as RatingData[]).map(e => e.recipeID);
+		try {
+			this.logger.debug(`[Provider] Getting possible ids for rating > ${rating}`);
+			return (await this.broker.call("v1.rating.find", { query: { avgRating: { $gte: rating } } }) as RatingData[]).map(e => e.recipeID);
+		} catch (error) {
+			throw new DatabaseError(error.message || "Failed to fetch recipe IDs by rating.", error.code || 500, "rating");
+		}
 	}
 
 	private async convertTagsInIDs(tags: string[]): Promise<string[]> {
 		this.logger.debug("Converting tags to their matching ids.", tags);
-		const ids = new Array<string>();
-		for (const tag of tags) {
-			ids.push((await this.broker.call("v1.tags.getByString", { name: tag }) as Tag[])[0].id);
+		try {
+			const ids = new Array<string>();
+			for (const tag of tags) {
+				ids.push((await this.broker.call("v1.tags.getByString", { name: tag }) as Tag[])[0].id);
+			}
+			return ids;
+		} catch (error) {
+			if (error instanceof BaseError) {throw error;}
+			else {
+				throw new FilterError(error.message || "Failed to convert tags to their ID", error.code || 500, FilterType.INTERNAL);
+			}
 		}
-		return ids;
 	}
 
 	private async getRecipesByTag(tagID: string): Promise<RecipeData[]> {
-		this.logger.debug(`Fetching recipes with tag: ${tagID}`);
-		return await this.broker.call("v1.data-store.find", { query: { tags: { $regex: tagID, $options: "i" } } }) as RecipeData[];
+		try {
+			this.logger.debug(`Fetching recipes with tag: ${tagID}`);
+			return await this.broker.call("v1.data-store.find", { query: { tags: { $regex: tagID, $options: "i" } } }) as RecipeData[];
+		} catch (error) {
+			throw new FilterError(error.message || "Failed to fetch RecipeData from data-store", error.code || 500, FilterType.TAG);
+		}
 	}
 
 	private intersectArray(recipes: RecipeData[], tags: string[]): RecipeData[] {

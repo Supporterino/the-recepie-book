@@ -1,7 +1,8 @@
 "use strict";
 
 import { Service, ServiceBroker} from "moleculer";
-import { RatingData, RecipeData } from "../../shared";
+import { ErrorMixin } from "../../mixins/error_logging.mixin";
+import { BaseError, DatabaseError, RatingData, RecipeData } from "../../shared";
 import { Units, Recipe, Tag, User } from "../../types";
 
 export default class IDConverterService extends Service {
@@ -10,6 +11,7 @@ export default class IDConverterService extends Service {
 		this.parseServiceSchema({
 			name: "id-converter",
             version: 1,
+			mixins: [ErrorMixin],
 			actions:{
 				/**
 				 * Converts a recipe from the internal data foramt with ids to the sendable object with all datas by resolving the ids.
@@ -114,30 +116,45 @@ export default class IDConverterService extends Service {
 
 	public async parseTagsToID(tagNames: string[]): Promise<string[]> {
 		this.logger.info("[Converter] Parse tags to id.", tagNames);
-		const output: string[] = [];
-		for (const tagName of tagNames) {
-			this.logger.debug(`Converting tag (${tagName}) to id`);
-			output.push(await this.broker.call("v1.tags.checkForTag", {name: tagName}));
+		try {
+			const output: string[] = [];
+			for (const tagName of tagNames) {
+				this.logger.debug(`Converting tag (${tagName}) to id`);
+				output.push(await this.broker.call("v1.tags.checkForTag", {name: tagName}));
+			}
+			return output;
+		} catch (error) {
+			if (error instanceof BaseError) {throw error;}
+			else {
+				throw new DatabaseError(error.message || "Failed to get ID for tag", error.code || 500, "tag");
+			}
 		}
-		return output;
 	}
 
 	public async parseTagsToName(tagIDs: string[]): Promise<string[]> {
 		this.logger.info("[Converter] Parse tag ids into name.", tagIDs);
-		const output: string[] = [];
-		for (const tagID of tagIDs) {
-			this.logger.debug(`Getting tag (${tagID})`);
-			output.push((await this.broker.call("v1.tags.get", { id: tagID }) as Tag).name);
+		try {
+			const output: string[] = [];
+			for (const tagID of tagIDs) {
+				this.logger.debug(`Getting tag (${tagID})`);
+				output.push((await this.broker.call("v1.tags.get", { id: tagID }) as Tag).name);
+			}
+			return output;
+		} catch (error) {
+			throw new DatabaseError(error.message || "Couldn't load tag by ID.", error.code || 500, "tag");
 		}
-		return output;
 	}
 
 	public async getRatingForRatingID(ratingID: string): Promise<number> {
 		this.logger.info(`[Converter] Getting avg rating for rating id: ${ratingID}`);
 		if (ratingID === "") {return 0;}
 		else {
-			const ratingPayload = await this.broker.call("v1.rating.get", { id: ratingID }) as RatingData;
-			return ratingPayload.avgRating;
+			try {
+				const ratingPayload = await this.broker.call("v1.rating.get", { id: ratingID }) as RatingData;
+				return ratingPayload.avgRating;
+			} catch (error) {
+				throw new DatabaseError(error.message || "Failed to load RatingData by ID.", error.code || 500, "rating");
+			}
 		}
 	}
 
@@ -151,20 +168,24 @@ export default class IDConverterService extends Service {
 
     public async convertRecipe(recipe: RecipeData): Promise<Recipe> {
 		this.logger.info(`[Converter] Converting recipe: ${recipe.id}`);
-		const [ tags, user, rating ] = await Promise.all([this.getTagPromise(recipe.tags), this.getOwnerPromise(recipe.owner), this.getRatingPromise(recipe.rating as string)]);
-		const out = {
-			id: recipe.id,
-			name: recipe.name,
-			description: recipe.description,
-			ingredients: recipe.ingredients,
-			steps: recipe.steps,
-			rating,
-			tags,
-			owner: user.username,
-			creationTimestamp: recipe.creationTimestamp,
-			updateTimestamp: recipe.updateTimestamp,
-		} as Recipe;
-        return out;
+		try {
+			const [ tags, user, rating ] = await Promise.all([this.getTagPromise(recipe.tags), this.getOwnerPromise(recipe.owner), this.getRatingPromise(recipe.rating as string)]);
+			const out = {
+				id: recipe.id,
+				name: recipe.name,
+				description: recipe.description,
+				ingredients: recipe.ingredients,
+				steps: recipe.steps,
+				rating,
+				tags,
+				owner: user.username,
+				creationTimestamp: recipe.creationTimestamp,
+				updateTimestamp: recipe.updateTimestamp,
+			} as Recipe;
+			return out;
+		} catch (error) {
+			throw new BaseError(error.message || "Conversion of RecipeData failed.", error.code || 500);
+		}
     }
 
 	private getTagPromise(tagIDs: string[]): Promise<string[]> {

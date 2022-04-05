@@ -1,5 +1,5 @@
-import {IncomingMessage} from "http";
-import {Service, ServiceBroker, Context} from "moleculer";
+import { IncomingMessage, ServerResponse } from "http";
+import moleculer, {Service, ServiceBroker, Context } from "moleculer";
 import ApiGateway, { Errors } from "moleculer-web";
 import { Auth } from "../../types";
 
@@ -31,7 +31,6 @@ export default class ApiService extends Service {
 						"v1.recipe-updater.*",
 						"v1.recipe-provider.*",
 						"v1.recipe-creation.*",
-						"v1.data-store.list",
 						"v1.user.*",
 						"v1.auth.*",
 						"api.*",
@@ -93,6 +92,18 @@ export default class ApiService extends Service {
 					folder: "public",
 					// Options to `server-static` module
 					options: {},
+				},
+				onError: (req: IncomingMessage, res: ServerResponse, err: moleculer.Errors.MoleculerError) => {
+					res.setHeader("Content-type", "application/json; charset=utf-8");
+					res.writeHead(err.code || 500);
+					const outError = {
+						name: err.name,
+						message: err.message,
+						code: err.code,
+						type: err.type || "NO_TYPE",
+						data: err.data || null,
+					};
+					res.end(JSON.stringify(outError, null, 2));
 				},
 			},
 
