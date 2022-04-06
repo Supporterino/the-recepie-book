@@ -37,7 +37,7 @@ export default class RecipeDeletionService extends Service {
 	}
 
 	public async delete(recipeID: string, userID: string): Promise<DeletionResponse> {
-		if (!(await this.broker.call("v1.user.ownsRecipe", { userID, recipeID }) as boolean)) {throw new AuthError("User doesn't own this recipe.", 403);}
+		if (!(await this.broker.call("v1.user.ownsRecipe", { recipeID }, { meta: { user: { id: userID}}}) as boolean)) {throw new AuthError("User doesn't own this recipe.", 403);}
 		this.logger.info(`[Deletion] Fireing event for deletion of recipe: ${recipeID}`);
 		this.broker.emit("recipe.deletion", { recipeID });
 		return { recipeID, msg: "Asynchronous deletion triggered."} as DeletionResponse;

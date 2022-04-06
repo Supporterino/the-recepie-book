@@ -125,7 +125,7 @@ export default class RatingService extends Service {
 						recipeID: "string",
 					},
 					handler: async (ctx: Context<RecipeDeletionParams>) => {
-						const id = await this.getByRecipeID(ctx.params.recipeID);
+						const id = (await this.getByRecipeID(ctx.params.recipeID) as RatingData).id;
 						ctx.call("v1.rating.remove", { id });
 					},
 				},
@@ -136,8 +136,9 @@ export default class RatingService extends Service {
 	public async getRatingForUser(userID: string, recipeID: string): Promise<number> {
 		if (!userID) {throw new AuthError("Unauthorized! No user logged in.", 401);}
 		const recipeRating = await this.getByRecipeID(recipeID);
+		if (!recipeRating) {return 0;}
 		const userRating = recipeRating.ratings.find(rating => rating.userID === userID);
-		if (!userRating) {throw new BaseError("User hasn't rated this recipe", 404);}
+		if (!userRating) {return 0;}
 		return userRating.rating;
 	}
 

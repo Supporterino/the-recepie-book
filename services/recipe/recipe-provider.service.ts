@@ -1,5 +1,6 @@
 "use strict";
 
+import { ObjectId } from "bson";
 import { Context, Service, ServiceBroker} from "moleculer";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
 import { BaseError, DatabaseError, FilterError, FilterParams, FilterType, GetByIdParams, GetByMinRatingParams, GetByNameParams, GetByTagsParams, RatingData, RecipeData } from "../../shared";
@@ -163,10 +164,13 @@ export default class RecipeProviderService extends Service {
 	public async filterRecipes(name: string, rating: number, tags: string[]): Promise<RecipeData[]> {
 		this.logger.info("Filtering with following settings:", name, rating, tags);
 		if (name === "" && tags.length === 0 && rating === 0) {return await this.getFeatured();}
-		else if (name !== "" && tags.length === 0) {return await this.getByNameAndRating(name, rating);}
-		else if (name !== "" && tags.length > 0) {return await this.getByNameAndRatingAndTags(name, rating, tags);}
-		else if (name === "" && tags.length === 0) {return await this.broker.call("v1.recipe-provider.getByMinRating", { rating });}
-		else if (name === "" && tags.length > 0) {return await this.getByRatingAndTags(rating, tags);}
+		else if (name === "" && tags.length === 0 && rating > 0) {return await this.getRecipesByRating(rating);}
+		else if (name !== "" && tags.length === 0 && rating === 0) {return await this.getRecipesByName(name);}
+		else if (name !== "" && tags.length === 0 && rating > 0) {return await this.getByNameAndRating(name, rating);}
+		else if (name === "" && tags.length > 0 && rating === 0) {return await this.getRecipesByTags(tags, true);}
+		else if (name === "" && tags.length > 0 && rating > 0) {return await this.getByRatingAndTags(rating, tags);}
+		else if (name !== "" && tags.length > 0 && rating === 0) {return await this.getByNameAndTags(name, tags);}
+		else if (name !== "" && tags.length > 0 && rating > 0) {return await this.getByNameAndRatingAndTags(name, rating, tags);}
 		else {
 			throw new FilterError("The provided filters do not match any allowed combination.", 400, FilterType.FULL);
 		}
@@ -243,6 +247,19 @@ export default class RecipeProviderService extends Service {
 		}
 	}
 
+	private async getByNameAndTags(name: string, tagNames: string[]): Promise<RecipeData[]> {
+		this.logger.debug(`Fetching recipe with Name: ${name} and tags: ${tagNames}`);
+		try {
+			const tagIDs = await this.convertTagsInIDs(tagNames);
+			return  await this.broker.call("v1.data-store.find", { query: { name: { $regex: name, $options: "i" }, tags: { $all: tagIDs } } }) as RecipeData[];
+		} catch (error) {
+			if (error instanceof BaseError) {throw error;}
+			else {
+				throw new FilterError(error.message || "Failed to fetch RecipeData from data-store", error.code || 500, FilterType.NAME_AND_TAGS);
+			}
+		}
+	}
+
 	private async getByRatingAndTags(rating: number, tagNames: string[]): Promise<RecipeData[]> {
 		this.logger.debug(`Fetching recipe with rating over: ${rating} and tags: ${tagNames}`);
 		try {
@@ -259,7 +276,8 @@ export default class RecipeProviderService extends Service {
 	private async getPossibleIDsForRating(rating: number): Promise<string[]> {
 		try {
 			this.logger.debug(`[Provider] Getting possible ids for rating > ${rating}`);
-			return (await this.broker.call("v1.rating.find", { query: { avgRating: { $gte: rating } } }) as RatingData[]).map(e => e.recipeID);
+			const ids = (await this.broker.call("v1.rating.find", { query: { avgRating: { $gte: rating } } }) as RatingData[]).map(e => e.recipeID);
+			return ids.map(id => new ObjectId(id).toHexString());
 		} catch (error) {
 			throw new DatabaseError(error.message || "Failed to fetch recipe IDs by rating.", error.code || 500, "rating");
 		}

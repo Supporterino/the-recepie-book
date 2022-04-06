@@ -38,9 +38,9 @@ export default class FavoriteService extends Service {
 				 * @method
 				 * @returns {Array<Recipe>} - The favorited recipes of the user
 				 */
-				getOwnFavorties: {
+				getOwnFavorites: {
 					rest: {
-						path: "/getOwnFavorties",
+						path: "/getOwnFavorites",
 						method: "GET",
 					},
 					async handler(ctx: Context<null, ServiceMeta>): Promise<Recipe[]> {
@@ -54,9 +54,9 @@ export default class FavoriteService extends Service {
 				 * @param {String} id - the user id to fetch favorites from
 				 * @returns {Array<Recipe>} - The favorited recipes of the user
 				 */
-				getFavorties: {
+				getFavorites: {
 					rest: {
-						path: "/getFavorties",
+						path: "/getFavorites",
 						method: "POST",
 					},
 					params: {
@@ -127,9 +127,10 @@ export default class FavoriteService extends Service {
 	}
 
 	public async getFavorites(userID: string): Promise<Recipe[]> {
-		const favorites = (await this.getFavoriteData(userID)).favorites;
+		const favoriteData = (await this.getFavoriteData(userID));
 		const out = new Array<Recipe>();
-		for (const id of favorites) {
+		if (!favoriteData) {return out;}
+		for (const id of favoriteData.favorites) {
 			try {
 				this.logger.info(`User[${userID}] Getting recipe for recipe id: ${id}`);
 				out.push(await this.broker.call("v1.recipe-provider.getById", { recipeID: id }));
