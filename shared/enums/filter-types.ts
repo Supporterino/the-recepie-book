@@ -6,5 +6,6 @@ export enum FilterType {
 	INTERNAL,
 	TAG,
 	NAME,
-	RATING
+	RATING,
+	NAME_AND_TAGS
 }

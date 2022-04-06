@@ -31,6 +31,7 @@ export default class ApiService extends Service {
 						"v1.recipe-updater.*",
 						"v1.recipe-provider.*",
 						"v1.recipe-creation.*",
+						"v1.recipe-deletion.*",
 						"v1.user.*",
 						"v1.auth.*",
 						"api.*",
