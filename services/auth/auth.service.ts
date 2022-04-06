@@ -97,10 +97,11 @@ export default class AuthService extends Service {
 			username: ctx.params.username,
 			password: await hash(ctx.params.password, this.SALT_ROUNDS),
 			email: ctx.params.email,
+			joinedAt: new Date(),
 		};
 		try {
 			this.logger.info(`Creating new account(${user.username}) for email: ${user.email}`);
-			await this.broker.call("v1.user.create", { username: user.username, password: user.password, email: user.email });
+			await this.broker.call("v1.user.create", { username: user.username, password: user.password, email: user.email, joinedAt: user.joinedAt });
 			return `User[${user.username}] created.`;
 		} catch (error) {
 			throw new DatabaseError(error.message || "Creation of user failed.", error.code || 500, "user");
