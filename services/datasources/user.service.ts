@@ -25,11 +25,13 @@ export default class UserService extends Service {
 					"username",
 					"password",
 					"email",
+					"joinedAt",
 				],
 				entityValidator: {
 					username: "string",
 					password: "string",
 					email: { type: "email" },
+					joinedAt: { type: "date", convert: true },
 				},
 			},
 			actions: {
