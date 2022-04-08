@@ -1,6 +1,5 @@
 "use strict";
 
-import { ObjectId } from "bson";
 import { Context, Service, ServiceBroker} from "moleculer";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
 import { BaseError, DatabaseError, FilterError, FilterParams, FilterType, GetByIdParams, GetByMinRatingParams, GetByNameParams, GetByTagsParams, RatingData, RecipeData } from "../../shared";
@@ -225,7 +224,7 @@ export default class RecipeProviderService extends Service {
 		this.logger.debug(`Fetching recipe with Name: ${name} and rating over: ${rating}`);
 		try {
 			const possibleIDs = await this.getPossibleIDsForRating(rating);
-			return  await this.broker.call("v1.data-store.find", { query: { id: { $in: possibleIDs }, name: { $regex: name, $options: "i" } } }) as RecipeData[];
+			return  await this.broker.call("v1.data-store.findOverID", { query: { _id: { $in: possibleIDs }, name: { $regex: name, $options: "i" } } }) as RecipeData[];
 		} catch (error) {
 			if (error instanceof BaseError) {throw error;}
 			else {
@@ -238,7 +237,7 @@ export default class RecipeProviderService extends Service {
 		this.logger.debug(`Fetching recipe with Name: ${name} and rating over: ${rating} and tags: ${tagNames}`);
 		try {
 			const [tagIDs, possibleIDs] = await Promise.all([this.convertTagsInIDs(tagNames), this.getPossibleIDsForRating(rating)]);
-			return  await this.broker.call("v1.data-store.find", { query: { id: { $in: possibleIDs }, name: { $regex: name, $options: "i" }, tags: { $all: tagIDs } } }) as RecipeData[];
+			return  await this.broker.call("v1.data-store.findOverID", { query: { _id: { $in: possibleIDs }, name: { $regex: name, $options: "i" }, tags: { $all: tagIDs } } }) as RecipeData[];
 		} catch (error) {
 			if (error instanceof BaseError) {throw error;}
 			else {
@@ -264,7 +263,7 @@ export default class RecipeProviderService extends Service {
 		this.logger.debug(`Fetching recipe with rating over: ${rating} and tags: ${tagNames}`);
 		try {
 			const [tagIDs, possibleIDs] = await Promise.all([this.convertTagsInIDs(tagNames), this.getPossibleIDsForRating(rating)]);
-			return  await this.broker.call("v1.data-store.find", { query: { id: { $in: possibleIDs }, tags: { $all: tagIDs } } }) as RecipeData[];
+			return await this.broker.call("v1.data-store.findOverID", { query: { _id: { $in: possibleIDs }, tags: { $all: tagIDs } } }) as RecipeData[];
 		} catch (error) {
 			if (error instanceof BaseError) {throw error;}
 			else {
@@ -276,8 +275,7 @@ export default class RecipeProviderService extends Service {
 	private async getPossibleIDsForRating(rating: number): Promise<string[]> {
 		try {
 			this.logger.debug(`[Provider] Getting possible ids for rating > ${rating}`);
-			const ids = (await this.broker.call("v1.rating.find", { query: { avgRating: { $gte: rating } } }) as RatingData[]).map(e => e.recipeID);
-			return ids.map(id => new ObjectId(id).toHexString());
+			return (await this.broker.call("v1.rating.find", { query: { avgRating: { $gte: rating } } }) as RatingData[]).map(e => e.recipeID);
 		} catch (error) {
 			throw new DatabaseError(error.message || "Failed to fetch recipe IDs by rating.", error.code || 500, "rating");
 		}

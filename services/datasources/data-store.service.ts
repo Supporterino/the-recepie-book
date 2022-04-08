@@ -1,13 +1,12 @@
 "use strict";
 
-import {Context, Service, ServiceBroker, ServiceSchema} from "moleculer";
+import {Context, Service, ServiceBroker} from "moleculer";
 import Connection from "../../mixins/db.mixin";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
 import { FirstRatingParams, MAX_PAGE_SIZE, PAGE_SIZE, RecipeDeletionParams } from "../../shared";
 import { Units } from "../../types";
-
 export default class DataStoreService extends Service {
-    private DBConnection = new Connection("recipes").start();
+	private DBConnection = new Connection("recipes").start();
 
     // @ts-ignore
 	public constructor(public broker: ServiceBroker, schema: ServiceSchema<{}> = {}) {
