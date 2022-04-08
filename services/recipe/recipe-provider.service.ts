@@ -2,7 +2,7 @@
 
 import { Context, Service, ServiceBroker} from "moleculer";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
-import { BaseError, DatabaseError, FilterError, FilterParams, FilterType, GetByIdParams, GetByMinRatingParams, GetByNameParams, GetByTagsParams, RatingData, RecipeData } from "../../shared";
+import { BaseError, DatabaseError, FilterError, FilterParams, FilterType, GetByIdParams, GetByMinRatingParams, GetByNameParams, GetByTagsParams, GetFromUserParams, RatingData, RecipeData, ServiceMeta } from "../../shared";
 import { Recipe, Tag } from "../../types";
 
 
@@ -31,6 +31,40 @@ export default class RecipeProviderService extends Service {
 					},
 					async handler(ctx: Context<GetByIdParams>): Promise<RecipeData> {
 						return await this.getRecipeByID(ctx.params.recipeID);
+					},
+				},
+				/**
+				 * Returns all recipes of a user
+				 *
+				 * @method
+				 * @param {String} recipeID - The id of the user to return from
+				 * @returns {RecipeData} - The recipe as JSON string
+				 */
+				 getFromUser: {
+					rest: {
+						path: "/getFromUser",
+						method: "POST",
+					},
+					params: {
+						userID: {type: "string", min: 2},
+					},
+					async handler(ctx: Context<GetFromUserParams>): Promise<RecipeData> {
+						return await this.getRecipesByUser(ctx.params.userID);
+					},
+				},
+				/**
+				 * Returns all recipes for me
+				 *
+				 * @method
+				 * @returns {RecipeData} - The recipe as JSON string
+				 */
+				 getMyRecipes: {
+					rest: {
+						path: "/getMyRecipes",
+						method: "GET",
+					},
+					async handler(ctx: Context<null, ServiceMeta>): Promise<RecipeData> {
+						return await this.getRecipesByUser(ctx.meta.user.id);
 					},
 				},
 				/**
@@ -144,6 +178,15 @@ export default class RecipeProviderService extends Service {
 	public async recipeDataConversion(ctx: Context<any, any>, res: RecipeData[] | RecipeData): Promise<Recipe | Recipe[]> {
 		if (res.constructor.name === "Array") {return await this.broker.call("v1.id-converter.convertRecipes", { recipes: res }) as Recipe[];}
 		else {return await this.broker.call("v1.id-converter.convertRecipe", { recipe: res }) as Recipe;}
+	}
+
+	public async getRecipesByUser(userID: string): Promise<RecipeData[]> {
+		this.logger.info(`Fetching recipe for user: ${userID}`);
+		try {
+			return  await this.broker.call("v1.data-store.find", { query: { owner: userID } }) as RecipeData[];
+		} catch (error) {
+			throw new FilterError(error.message || "Failed to fetch RecipeData from data-store", error.code || 500, FilterType.USER);
+		}
 	}
 
 	public async getFeatured(): Promise<RecipeData[]> {

@@ -9,3 +9,7 @@ export interface AddFavoriteParams {
 export interface RemoveFavoriteParams {
 	recipeID: string;
 }
+
+export interface IsFavoriteParams {
+	recipeID: string;
+}
