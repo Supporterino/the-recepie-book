@@ -3,7 +3,7 @@
 import { Context, Service, ServiceBroker} from "moleculer";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
 import { BaseError, ConvertRatingIDtoRatingParams, ConvertRecipeParams, ConvertRecipesParams, ConvertTagsToIDParams, ConvertTagsToNameParams, DatabaseError, RatingData, RecipeData } from "../../shared";
-import { Units, Recipe, Tag, User } from "../../types";
+import { Units, Recipe, Tag, User, RatingInfo } from "../../types";
 
 export default class IDConverterService extends Service {
 	public constructor(public broker: ServiceBroker) {
@@ -145,13 +145,13 @@ export default class IDConverterService extends Service {
 		}
 	}
 
-	public async getRatingForRatingID(ratingID: string): Promise<number> {
+	public async getRatingForRatingID(ratingID: string): Promise<RatingInfo> {
 		this.logger.info(`[Converter] Getting avg rating for rating id: ${ratingID}`);
-		if (ratingID === "") {return 0;}
+ 		if (ratingID === "") {return { avgRating: 0, numOfRatings: 0} as RatingInfo;}
 		else {
 			try {
 				const ratingPayload = await this.broker.call("v1.rating.get", { id: ratingID }) as RatingData;
-				return ratingPayload.avgRating;
+				return { avgRating: ratingPayload.avgRating, numOfRatings: ratingPayload.ratings.length } as RatingInfo;
 			} catch (error) {
 				throw new DatabaseError(error.message || "Failed to load RatingData by ID.", error.code || 500, "rating");
 			}
@@ -181,6 +181,7 @@ export default class IDConverterService extends Service {
 				owner: user.username,
 				creationTimestamp: recipe.creationTimestamp,
 				updateTimestamp: recipe.updateTimestamp,
+				isFavorite: false,
 			} as Recipe;
 			return out;
 		} catch (error) {
@@ -196,7 +197,7 @@ export default class IDConverterService extends Service {
 		return this.broker.call("v1.user.get", { id: userID });
 	}
 
-	private getRatingPromise(ratingID: string): Promise<number> {
+	private getRatingPromise(ratingID: string): Promise<RatingInfo> {
 		return this.broker.call("v1.id-converter.convertRatingIDtoRating", { ratingID });
 	}
 }

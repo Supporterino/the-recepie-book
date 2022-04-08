@@ -7,5 +7,6 @@ export enum FilterType {
 	TAG,
 	NAME,
 	RATING,
-	NAME_AND_TAGS
+	NAME_AND_TAGS,
+	USER
 }

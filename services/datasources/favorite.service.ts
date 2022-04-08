@@ -4,7 +4,7 @@ import {Context, Service, ServiceBroker, ServiceSchema} from "moleculer";
 import Connection from "../../mixins/db.mixin";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
 import { BaseError, DatabaseError, FavoriteData, FetchError, FetchTarget, MAX_PAGE_SIZE, PAGE_SIZE, RecipeDeletionParams, ServiceMeta } from "../../shared";
-import { AddFavoriteParams, GetFavoriteParams, RemoveFavoriteParams } from "../../shared/services/favorite.types";
+import { AddFavoriteParams, GetFavoriteParams, IsFavoriteParams, RemoveFavoriteParams } from "../../shared/services/favorite.types";
 import { Recipe, FavoriteResponse } from "../../types";
 
 export default class FavoriteService extends Service {
@@ -104,6 +104,25 @@ export default class FavoriteService extends Service {
 						return await this.removeFavorite(ctx.meta.user.id, ctx.params.recipeID);
 					},
 				},
+				/**
+				 * Check if a recipe is favorited
+				 *
+				 * @method
+				 * @param {String} recipeID - The id of the recipe to check.
+				 * @returns {FavoriteResponse}
+				 */
+				 isFavorite: {
+					rest: {
+						path: "/isFavorited",
+						method: "POST",
+					},
+					params: {
+						recipeID: "string",
+					},
+					async handler(ctx: Context<IsFavoriteParams, ServiceMeta>): Promise<boolean> {
+						return await this.isFavorite(ctx.meta.user.id, ctx.params.recipeID);
+					},
+				},
 			},
 			events: {
 				/**
@@ -124,6 +143,13 @@ export default class FavoriteService extends Service {
 				},
 			},
 		}, schema));
+	}
+
+	public async isFavorite(userID: string, recipeID: string): Promise<boolean> {
+		const favoriteData = (await this.getFavoriteData(userID));
+		if (!favoriteData) {return false;}
+		if (favoriteData.favorites.findIndex(entry => entry === recipeID) === -1) {return false;}
+		else {return true;}
 	}
 
 	public async getFavorites(userID: string): Promise<Recipe[]> {

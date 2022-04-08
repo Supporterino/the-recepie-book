@@ -20,3 +20,7 @@ export interface FilterParams {
 	ratingMin: number;
 	tags: string[];
 }
+
+export interface GetFromUserParams {
+	userID: string;
+}
