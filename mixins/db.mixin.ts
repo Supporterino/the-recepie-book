@@ -1,10 +1,9 @@
 "use strict";
 
-import { existsSync } from "fs";
-import { sync } from "mkdirp";
 import { Context, Service, ServiceSchema } from "moleculer";
 import DbService from "moleculer-db";
-
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const   MongoAdapter = require("moleculer-db-adapter-mongo");
 export default class Connection implements Partial<ServiceSchema>, ThisType<Service>{
 
 	private cacheCleanEventName: string;
@@ -14,8 +13,11 @@ export default class Connection implements Partial<ServiceSchema>, ThisType<Serv
 	public constructor(public collectionName: string) {
 		this.collection = collectionName;
 		this.cacheCleanEventName = `cache.clean.${this.collection}`;
+
 		this.schema = {
 			mixins: [DbService],
+			adapter: new MongoAdapter(process.env.MONGO_URI),
+			collection: this.collection,
 			events: {
 				/**
 				 * Subscribe to the cache clean event. If it's triggered
@@ -27,6 +29,24 @@ export default class Connection implements Partial<ServiceSchema>, ThisType<Serv
 						this.logger.info(`Cleaning caches for collection ${this.fullName},${this.collection}`);
 						await this.broker.cacher.clean(`${this.fullName}.*`);
 					}
+				},
+			},
+			actions: {
+				findOverID: {
+					params: {
+						query: "object",
+					},
+					async handler(ctx){
+						const query = ctx.params.query;
+						const ids = [];
+						// eslint-disable-next-line no-underscore-dangle
+						for (const id of query._id.$in) {
+							ids.push(this.adapter.stringToObjectID(id));
+						}
+						// eslint-disable-next-line no-underscore-dangle
+						query._id.$in = ids;
+						return await ctx.call("v1.data-store.find", { query });
+					},
 				},
 			},
 			methods: {
@@ -57,35 +77,6 @@ export default class Connection implements Partial<ServiceSchema>, ThisType<Serv
 	}
 
 	public start(){
-		if (process.env.MONGO_URI) {
-			// Mongo adapter
-			// eslint-disable-next-line @typescript-eslint/no-var-requires
-			const   MongoAdapter = require("moleculer-db-adapter-mongo");
-			this.schema.adapter = new MongoAdapter(process.env.MONGO_URI);
-			this.schema.collection = this.collection;
-		} else if (process.env.NODE_ENV === "test") {
-			// NeDB memory adapter for testing
-			// @ts-ignore
-			this.schema.adapter = new DbService.MemoryAdapter();
-		} else {
-			// NeDB file DB adapter
-
-			// Create data folder
-			if (!existsSync("./data")) {
-				sync("./data");
-			}
-			// @ts-ignore
-			this.schema.adapter = new DbService.MemoryAdapter({ filename: `./data/${this.collection}.db` });
-		}
-
 		return this.schema;
-	}
-
-	public get _collection(): string {
-		return this.collection;
-	}
-
-	public set _collection(value: string) {
-		this.collection = value;
 	}
 }
