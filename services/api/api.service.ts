@@ -37,6 +37,7 @@ export default class ApiService extends Service {
 						"api.*",
 						"v1.rating.*",
 						"v1.favorite.*",
+						"v1.recent.getRecents",
 					],
 					use: [],
 					mergeParams: true,
