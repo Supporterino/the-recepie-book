@@ -170,7 +170,7 @@ export default class IDConverterService extends Service {
 		this.logger.info(`[Converter] Converting recipe: ${recipe.id}`);
 		try {
 			if (userID) {this.broker.emit("user.recentAdd", { userID, recipeID: recipe.id });}
-			const [ tags, user, rating, isFavorite, myRating ] = await Promise.all([this.getTagPromise(recipe.tags), this.getOwnerPromise(recipe.owner), this.getRatingPromise(recipe.rating as string), this.getFavoritePromise(recipe.id, userID), this.getMyRatingPromise(recipe.id, userID)]);
+			const [ tags, user, rating, isFavorite, myRating, isCookList ] = await Promise.all([this.getTagPromise(recipe.tags), this.getOwnerPromise(recipe.owner), this.getRatingPromise(recipe.rating as string), this.getFavoritePromise(recipe.id, userID), this.getMyRatingPromise(recipe.id, userID), this.getCookListPromise(recipe.id, userID)]);
 			const out = {
 				id: recipe.id,
 				name: recipe.name,
@@ -184,6 +184,7 @@ export default class IDConverterService extends Service {
 				updateTimestamp: recipe.updateTimestamp,
 				isFavorite,
 				myRating,
+				isCookList,
 			} as Recipe;
 			return out;
 		} catch (error) {
@@ -205,6 +206,11 @@ export default class IDConverterService extends Service {
 
 	private getFavoritePromise(recipeID: string, userID: string): Promise<boolean> {
 		if (userID) {return this.broker.call("v1.favorite.isFavorite", {recipeID }, { meta: { user: { id: userID }}});}
+		else {return new Promise((resolve, reject) => {resolve(false);});}
+	}
+
+	private getCookListPromise(recipeID: string, userID: string): Promise<boolean> {
+		if (userID) {return this.broker.call("v1.cooklist.isOnCookList", {recipeID }, { meta: { user: { id: userID }}});}
 		else {return new Promise((resolve, reject) => {resolve(false);});}
 	}
 
