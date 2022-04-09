@@ -3,9 +3,10 @@
 import {Context, Errors, Service, ServiceBroker} from "moleculer";
 import { sign, verify, VerifyErrors } from "jsonwebtoken";
 import { hash, compare } from "bcrypt";
-import { Auth, User } from "../../types";
+import { Auth } from "../../types";
 import { DatabaseError } from "../../shared";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
+import { UserData } from "../../shared/interfaces/userData";
 
 export default class AuthService extends Service {
 	private JWT_SECRET: string = process.env.JWT_SECRET;
@@ -93,7 +94,7 @@ export default class AuthService extends Service {
 			this.logger.warn(`${oldUser.email} has already a registered account.`);
 			return Promise.reject(new Errors.MoleculerError("E-Mail already exists. Please login!", 409));
 		}
-		const user: User = {
+		const user: UserData = {
 			username: ctx.params.username,
 			password: await hash(ctx.params.password, this.SALT_ROUNDS),
 			email: ctx.params.email,
@@ -135,15 +136,15 @@ export default class AuthService extends Service {
 		}
 	}
 
-	private generateToken(user: User): string {
+	private generateToken(user: UserData): string {
 		this.logger.info(`Generating token for ${user.email}`);
 		return sign({ id:user.id, email: user.email } as Auth, this.JWT_SECRET, { expiresIn: "6h" });
 	}
 
-	private async getUser(email: string): Promise<User> {
+	private async getUser(email: string): Promise<UserData> {
 		this.logger.info(`Loading user data for user: ${email}`);
 		try {
-			const user = (await this.broker.call("v1.user.find", { query: { email } }) as User[])[0];
+			const user = (await this.broker.call("v1.user.find", { query: { email } }) as UserData[])[0];
 			return user;
 		} catch (error) {
 			throw new DatabaseError(error.message || "Couldn't load user via its email address.", error.code || 500, "user");

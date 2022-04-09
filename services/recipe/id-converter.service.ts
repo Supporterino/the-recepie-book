@@ -2,7 +2,7 @@
 
 import { Context, Service, ServiceBroker} from "moleculer";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
-import { BaseError, ConvertRatingIDtoRatingParams, ConvertRecipeParams, ConvertRecipesParams, ConvertTagsToIDParams, ConvertTagsToNameParams, DatabaseError, RatingData, RecipeData } from "../../shared";
+import { BaseError, ConvertRatingIDtoRatingParams, ConvertRecipeParams, ConvertRecipesParams, ConvertTagsToIDParams, ConvertTagsToNameParams, DatabaseError, RatingData, RecipeData, ServiceMeta } from "../../shared";
 import { Units, Recipe, Tag, User, RatingInfo } from "../../types";
 
 export default class IDConverterService extends Service {
@@ -35,8 +35,8 @@ export default class IDConverterService extends Service {
 							updateTimestamp: { type: "date", convert: true },
 						} },
 					},
-					async handler(ctx: Context<ConvertRecipeParams>): Promise<Recipe> {
-						return await this.convertRecipe(ctx.params.recipe);
+					async handler(ctx: Context<ConvertRecipeParams, ServiceMeta>): Promise<Recipe> {
+						return await this.convertRecipe(ctx.params.recipe, ctx.meta.user?.id);
 					},
 				},
 				/**
@@ -61,8 +61,8 @@ export default class IDConverterService extends Service {
 							updateTimestamp: { type: "date", convert: true },
 						}} },
 					},
-					async handler(ctx: Context<ConvertRecipesParams>): Promise<Recipe> {
-						return await this.convertRecipes(ctx.params.recipes);
+					async handler(ctx: Context<ConvertRecipesParams, ServiceMeta>): Promise<Recipe> {
+						return await this.convertRecipes(ctx.params.recipes, ctx.meta);
 					},
 				},
 				/**
@@ -158,18 +158,18 @@ export default class IDConverterService extends Service {
 		}
 	}
 
-	public async convertRecipes(recipes: RecipeData[]): Promise<Recipe[]> {
+	public async convertRecipes(recipes: RecipeData[], meta: ServiceMeta): Promise<Recipe[]> {
 		const out = new Array<Recipe>();
         for (const recipe of recipes) {
-            out.push(await this.broker.call("v1.id-converter.convertRecipe", {recipe}));
+            out.push(await this.broker.call("v1.id-converter.convertRecipe", {recipe}, { meta }));
         }
         return out;
     }
 
-    public async convertRecipe(recipe: RecipeData): Promise<Recipe> {
+    public async convertRecipe(recipe: RecipeData, userID: string = null): Promise<Recipe> {
 		this.logger.info(`[Converter] Converting recipe: ${recipe.id}`);
 		try {
-			const [ tags, user, rating ] = await Promise.all([this.getTagPromise(recipe.tags), this.getOwnerPromise(recipe.owner), this.getRatingPromise(recipe.rating as string)]);
+			const [ tags, user, rating, isFavorite, myRating ] = await Promise.all([this.getTagPromise(recipe.tags), this.getOwnerPromise(recipe.owner), this.getRatingPromise(recipe.rating as string), this.getFavoritePromise(recipe.id, userID), this.getMyRatingPromise(recipe.id, userID)]);
 			const out = {
 				id: recipe.id,
 				name: recipe.name,
@@ -178,10 +178,11 @@ export default class IDConverterService extends Service {
 				steps: recipe.steps,
 				rating,
 				tags,
-				owner: user.username,
+				owner: user,
 				creationTimestamp: recipe.creationTimestamp,
 				updateTimestamp: recipe.updateTimestamp,
-				isFavorite: false,
+				isFavorite,
+				myRating,
 			} as Recipe;
 			return out;
 		} catch (error) {
@@ -194,10 +195,20 @@ export default class IDConverterService extends Service {
 	}
 
 	private getOwnerPromise(userID: string): Promise<User> {
-		return this.broker.call("v1.user.get", { id: userID });
+		return this.broker.call("v1.user.getSanitizedUser", { userID });
 	}
 
 	private getRatingPromise(ratingID: string): Promise<RatingInfo> {
 		return this.broker.call("v1.id-converter.convertRatingIDtoRating", { ratingID });
+	}
+
+	private getFavoritePromise(recipeID: string, userID: string): Promise<boolean> {
+		if (userID) {return this.broker.call("v1.favorite.isFavorite", {recipeID }, { meta: { user: { id: userID }}});}
+		else {return new Promise((resolve, reject) => {resolve(false);});}
+	}
+
+	private getMyRatingPromise(recipeID: string, userID: string): Promise<number> {
+		if (userID) {return this.broker.call("v1.rating.getRatingForUser", {recipeID }, { meta: { user: { id: userID }}});}
+		else {return new Promise((resolve, reject) => {resolve(0);});}
 	}
 }
