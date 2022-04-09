@@ -169,6 +169,7 @@ export default class IDConverterService extends Service {
     public async convertRecipe(recipe: RecipeData, userID: string = null): Promise<Recipe> {
 		this.logger.info(`[Converter] Converting recipe: ${recipe.id}`);
 		try {
+			if (userID) {this.broker.emit("user.recentAdd", { userID, recipeID: recipe.id });}
 			const [ tags, user, rating, isFavorite, myRating ] = await Promise.all([this.getTagPromise(recipe.tags), this.getOwnerPromise(recipe.owner), this.getRatingPromise(recipe.rating as string), this.getFavoritePromise(recipe.id, userID), this.getMyRatingPromise(recipe.id, userID)]);
 			const out = {
 				id: recipe.id,
