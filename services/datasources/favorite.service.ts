@@ -44,7 +44,7 @@ export default class FavoriteService extends Service {
 						method: "GET",
 					},
 					async handler(ctx: Context<null, ServiceMeta>): Promise<Recipe[]> {
-						return await this.getFavorites(ctx.meta.user.id);
+						return await this.getFavorites(ctx.meta.user.id, ctx.meta);
 					},
 				},
 				/**
@@ -63,7 +63,7 @@ export default class FavoriteService extends Service {
 						userID: "string",
 					},
 					async handler(ctx: Context<GetFavoriteParams, ServiceMeta>): Promise<Recipe[]> {
-						return await this.getFavorites(ctx.params.userID);
+						return await this.getFavorites(ctx.params.userID, ctx.meta);
 					},
 				},
 				/**
@@ -152,14 +152,14 @@ export default class FavoriteService extends Service {
 		else {return true;}
 	}
 
-	public async getFavorites(userID: string): Promise<Recipe[]> {
+	public async getFavorites(userID: string, meta: ServiceMeta = null): Promise<Recipe[]> {
 		const favoriteData = (await this.getFavoriteData(userID));
 		const out = new Array<Recipe>();
 		if (!favoriteData) {return out;}
 		for (const id of favoriteData.favorites) {
 			try {
 				this.logger.info(`User[${userID}] Getting recipe for recipe id: ${id}`);
-				out.push(await this.broker.call("v1.recipe-provider.getById", { recipeID: id }));
+				out.push(await this.broker.call("v1.recipe-provider.getById", { recipeID: id }, { meta }));
 			} catch (error) {
 				if (error instanceof BaseError) {throw error;}
 				else {

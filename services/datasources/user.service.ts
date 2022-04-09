@@ -3,8 +3,9 @@
 import {Context, Service, ServiceBroker, ServiceSchema} from "moleculer";
 import Connection from "../../mixins/db.mixin";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
-import { DatabaseError, IsLegitUserParams, MAX_PAGE_SIZE, OwnsRecipeParams, PAGE_SIZE, ServiceMeta } from "../../shared";
-import { Recipe, User } from "../../types";
+import { DatabaseError, GetSanitizedUserParams, IsLegitUserParams, MAX_PAGE_SIZE, OwnsRecipeParams, PAGE_SIZE, RecipeData, ServiceMeta } from "../../shared";
+import { UserData } from "../../shared/interfaces/userData";
+import { User } from "../../types";
 
 export default class UserService extends Service {
     private DBConnection = new Connection("users").start();
@@ -72,13 +73,30 @@ export default class UserService extends Service {
 						return await this.checkAuthor(ctx.meta.user.id, ctx.params.recipeID);
 					},
 				},
+				getSanitizedUser: {
+					rest: {
+						method: "POST",
+						path: "/getSanitizedUser",
+					},
+					params: {
+						userID: "string",
+					},
+					async handler(ctx: Context<GetSanitizedUserParams, ServiceMeta>): Promise<User> {
+						return await this.getSanitizedUser(ctx.params.userID);
+					},
+				},
 			},
 		}, schema));
 	}
 
+	public async getSanitizedUser(userID: string): Promise<User> {
+		const user = await this.broker.call("v1.user.get", { id: userID }) as UserData;
+		return { id: user.id, username: user.username, joinedAt: user.joinedAt } as User;
+	}
+
 	public async checkAuthentic(id: string, email: string): Promise<boolean> {
 		try {
-			const user = await this.broker.call("v1.user.get", { id }) as User;
+			const user = await this.broker.call("v1.user.get", { id }) as UserData;
 			if (user && user.email === email) {return true;}
 			else {return false;}
 		} catch (error) {
@@ -87,7 +105,7 @@ export default class UserService extends Service {
 	}
 
 	public async checkAuthor(userID: string, recipeID: string): Promise<boolean> {
-		if (userID === (await this.broker.call("v1.data-store.get", { id: recipeID }) as Recipe).owner) {return true;}
+		if (userID === (await this.broker.call("v1.data-store.get", { id: recipeID }) as RecipeData).owner) {return true;}
 		else {return false;}
 	}
 }

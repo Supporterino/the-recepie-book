@@ -29,7 +29,7 @@ export default class RecipeProviderService extends Service {
 					params: {
 						recipeID: {type: "string", min: 2},
 					},
-					async handler(ctx: Context<GetByIdParams>): Promise<RecipeData> {
+					async handler(ctx: Context<GetByIdParams, ServiceMeta>): Promise<RecipeData> {
 						return await this.getRecipeByID(ctx.params.recipeID);
 					},
 				},
@@ -46,9 +46,9 @@ export default class RecipeProviderService extends Service {
 						method: "POST",
 					},
 					params: {
-						userID: {type: "string", min: 2},
+						userID: "string",
 					},
-					async handler(ctx: Context<GetFromUserParams>): Promise<RecipeData> {
+					async handler(ctx: Context<GetFromUserParams, ServiceMeta>): Promise<RecipeData[]> {
 						return await this.getRecipesByUser(ctx.params.userID);
 					},
 				},
@@ -63,7 +63,7 @@ export default class RecipeProviderService extends Service {
 						path: "/getMyRecipes",
 						method: "GET",
 					},
-					async handler(ctx: Context<null, ServiceMeta>): Promise<RecipeData> {
+					async handler(ctx: Context<null, ServiceMeta>): Promise<RecipeData[]> {
 						return await this.getRecipesByUser(ctx.meta.user.id);
 					},
 				},
@@ -82,7 +82,7 @@ export default class RecipeProviderService extends Service {
 					params: {
 						name: {type: "string", min: 2},
 					},
-					async handler(ctx: Context<GetByNameParams>): Promise<RecipeData[]> {
+					async handler(ctx: Context<GetByNameParams, ServiceMeta>): Promise<RecipeData[]> {
 						return await this.getRecipesByName(ctx.params.name);
 					},
 				},
@@ -103,7 +103,7 @@ export default class RecipeProviderService extends Service {
 						tags: {type: "array", min: 1, items: "string"},
 						intersect: {type: "boolean", optional: true, default: false},
 					},
-					async handler(ctx: Context<GetByTagsParams>): Promise<RecipeData[]> {
+					async handler(ctx: Context<GetByTagsParams, ServiceMeta>): Promise<RecipeData[]> {
 						return await this.getRecipesByTags(ctx.params.tags, ctx.params.intersect);
 					},
 				},
@@ -122,7 +122,7 @@ export default class RecipeProviderService extends Service {
 					params: {
 						rating: {type: "number"},
 					},
-					async handler(ctx: Context<GetByMinRatingParams>): Promise<RecipeData[]> {
+					async handler(ctx: Context<GetByMinRatingParams, ServiceMeta>): Promise<RecipeData[]> {
 						return await this.getRecipesByRating(ctx.params.rating);
 					},
 				},
@@ -145,7 +145,7 @@ export default class RecipeProviderService extends Service {
 						ratingMin: {type: "number"},
 						tags: {type: "array", items:"string"},
 					},
-					async handler(ctx: Context<FilterParams>): Promise<RecipeData[]> {
+					async handler(ctx: Context<FilterParams, ServiceMeta>): Promise<RecipeData[]> {
 						return await this.filterRecipes(ctx.params.text, ctx.params.ratingMin, ctx.params.tags);
 					},
 				},
@@ -160,7 +160,7 @@ export default class RecipeProviderService extends Service {
 						path: "/featuredRecipes",
 						method: "GET",
 					},
-					async handler(ctx: Context<null>): Promise<RecipeData[]> {
+					async handler(ctx: Context<null, ServiceMeta>): Promise<RecipeData[]> {
 						return await this.getFeatured();
 					},
 				},
@@ -176,8 +176,8 @@ export default class RecipeProviderService extends Service {
 	}
 
 	public async recipeDataConversion(ctx: Context<any, any>, res: RecipeData[] | RecipeData): Promise<Recipe | Recipe[]> {
-		if (res.constructor.name === "Array") {return await this.broker.call("v1.id-converter.convertRecipes", { recipes: res }) as Recipe[];}
-		else {return await this.broker.call("v1.id-converter.convertRecipe", { recipe: res }) as Recipe;}
+		if (res.constructor.name === "Array") {return await this.broker.call("v1.id-converter.convertRecipes", { recipes: res }, { meta: ctx.meta }) as Recipe[];}
+		else {return await this.broker.call("v1.id-converter.convertRecipe", { recipe: res }, { meta: ctx.meta }) as Recipe;}
 	}
 
 	public async getRecipesByUser(userID: string): Promise<RecipeData[]> {

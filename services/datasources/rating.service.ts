@@ -1,9 +1,9 @@
 "use strict";
 
-import {Context, Service, ServiceBroker, ServiceMethods, ServiceSchema} from "moleculer";
+import {Context, Service, ServiceBroker, ServiceSchema} from "moleculer";
 import Connection from "../../mixins/db.mixin";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
-import { AddRatingParams, AuthError, BaseError, DatabaseError, GetRatingForUserParams, MAX_PAGE_SIZE, PAGE_SIZE,RatingData, RatingEntry, RecipeDeletionParams, RemoveRatingParams, ServiceMeta, UpdateRatingParams } from "../../shared";
+import { AddRatingParams, AuthError, DatabaseError, GetRatingForUserParams, MAX_PAGE_SIZE, PAGE_SIZE,RatingData, RatingEntry, RecipeDeletionParams, RemoveRatingParams, ServiceMeta, UpdateRatingParams } from "../../shared";
 import { RatingResponse, RatingOperations } from "../../types";
 
 export default class RatingService extends Service {
