@@ -3,8 +3,7 @@
 import {Context, Service, ServiceBroker, ServiceSchema} from "moleculer";
 import Connection from "../../mixins/db.mixin";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
-import { BaseError, DatabaseError, FavoriteData, FetchError, FetchTarget, MAX_PAGE_SIZE, PAGE_SIZE, RecipeDeletionParams, ServiceMeta } from "../../shared";
-import { AddFavoriteParams, GetFavoriteParams, IsFavoriteParams, RemoveFavoriteParams } from "../../shared/services/favorite.types";
+import { AddFavoriteParams, BaseError, DatabaseError, FavoriteData, FetchError, FetchTarget, GetFavoriteParams, IsFavoriteParams, MAX_PAGE_SIZE, PAGE_SIZE, RecipeDeletionParams, RemoveFavoriteParams, ServiceMeta } from "../../shared";
 import { Recipe, FavoriteResponse } from "../../types";
 
 export default class FavoriteService extends Service {
@@ -148,8 +147,7 @@ export default class FavoriteService extends Service {
 	public async isFavorite(userID: string, recipeID: string): Promise<boolean> {
 		const favoriteData = (await this.getFavoriteData(userID));
 		if (!favoriteData) {return false;}
-		if (favoriteData.favorites.findIndex(entry => entry === recipeID) === -1) {return false;}
-		else {return true;}
+		return favoriteData.favorites.findIndex(entry => entry === recipeID) !== -1;
 	}
 
 	public async getFavorites(userID: string, meta: ServiceMeta = null): Promise<Recipe[]> {

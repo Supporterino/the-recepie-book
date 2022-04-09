@@ -3,9 +3,7 @@
 import {Context, Service, ServiceBroker, ServiceSchema} from "moleculer";
 import Connection from "../../mixins/db.mixin";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
-import { BaseError, DatabaseError, FetchError, FetchTarget, MAX_PAGE_SIZE, PAGE_SIZE, RECENTS_SIZE, ServiceMeta } from "../../shared";
-import { RecentData } from "../../shared/interfaces/recentData";
-import { AddRecentParams } from "../../shared/services/recent.types";
+import { AddRecentParams, BaseError, DatabaseError, FetchError, FetchTarget, MAX_PAGE_SIZE, PAGE_SIZE, RecentData, RECENTS_SIZE, ServiceMeta } from "../../shared";
 import { Recipe } from "../../types";
 
 export default class RecentService extends Service {

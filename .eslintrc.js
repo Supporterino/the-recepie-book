@@ -93,7 +93,7 @@ module.exports = {
 			"error",
 			{
 				"ignoreUrls": true ,
-				code: 320
+				code: 560
 			}
 		],
 		"new-parens": "error",
