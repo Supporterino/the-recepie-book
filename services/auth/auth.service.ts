@@ -3,7 +3,7 @@
 import {Context, Errors, Service, ServiceBroker} from "moleculer";
 import { sign, verify, VerifyErrors } from "jsonwebtoken";
 import { hash, compare } from "bcrypt";
-import { Auth } from "../../types";
+import { Auth, LoginResponse, User } from "../../types";
 import { DatabaseError } from "../../shared";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
 import { UserData } from "../../shared/interfaces/userData";
@@ -36,7 +36,7 @@ export default class AuthService extends Service {
 						email: { type: "email", normalize: true },
 						password: "string",
 					},
-					async handler(ctx): Promise<string | Errors.MoleculerError> {
+					async handler(ctx): Promise<LoginResponse | Errors.MoleculerError> {
 						return await this.login(ctx);
 					},
 				},
@@ -94,12 +94,12 @@ export default class AuthService extends Service {
 			this.logger.warn(`${oldUser.email} has already a registered account.`);
 			return Promise.reject(new Errors.MoleculerError("E-Mail already exists. Please login!", 409));
 		}
-		const user: UserData = {
+		const user = {
 			username: ctx.params.username,
 			password: await hash(ctx.params.password, this.SALT_ROUNDS),
 			email: ctx.params.email,
 			joinedAt: new Date(),
-		};
+		} as UserData;
 		try {
 			this.logger.info(`Creating new account(${user.username}) for email: ${user.email}`);
 			await this.broker.call("v1.user.create", { username: user.username, password: user.password, email: user.email, joinedAt: user.joinedAt });
@@ -124,12 +124,16 @@ export default class AuthService extends Service {
 		});
 	}
 
-	public async login(ctx: Context<any>): Promise<string | Errors.MoleculerError> {
+	public async login(ctx: Context<any>): Promise<LoginResponse | Errors.MoleculerError> {
 		const user = await this.getUser(ctx.params.email);
 
 		if (user && await compare(ctx.params.password, user.password)) {
 			this.logger.info(`${ctx.params.email} logged in.`);
-			return this.generateToken(user);
+			return {
+				token: this.generateToken(user),
+				userID: user.id,
+				msg: "Login successful",
+			} as LoginResponse;
 		} else {
 			this.logger.warn("Wrong password for user.", ctx.params.email);
 			return Promise.reject(new Errors.MoleculerError("Invalid Credentials", 400));

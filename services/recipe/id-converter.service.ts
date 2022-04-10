@@ -170,7 +170,7 @@ export default class IDConverterService extends Service {
 		this.logger.info(`[Converter] Converting recipe: ${recipe.id}`);
 		try {
 			if (userID) {this.broker.emit("user.recentAdd", { userID, recipeID: recipe.id });}
-			const [ tags, user, rating, isFavorite, myRating, isCookList ] = await Promise.all([this.getTagPromise(recipe.tags), this.getOwnerPromise(recipe.owner), this.getRatingPromise(recipe.rating as string), this.getFavoritePromise(recipe.id, userID), this.getMyRatingPromise(recipe.id, userID), this.getCookListPromise(recipe.id, userID)]);
+			const [ tags, user, rating, isFavorite, myRating, isCookList, picture ] = await Promise.all([this.getTagPromise(recipe.tags), this.getOwnerPromise(recipe.owner), this.getRatingPromise(recipe.rating as string), this.getFavoritePromise(recipe.id, userID), this.getMyRatingPromise(recipe.id, userID), this.getCookListPromise(recipe.id, userID), this.getImageUrlPromise(recipe.picture)]);
 			const out = {
 				id: recipe.id,
 				name: recipe.name,
@@ -180,6 +180,7 @@ export default class IDConverterService extends Service {
 				rating,
 				tags,
 				owner: user,
+				picture,
 				creationTimestamp: recipe.creationTimestamp,
 				updateTimestamp: recipe.updateTimestamp,
 				isFavorite,
@@ -217,5 +218,10 @@ export default class IDConverterService extends Service {
 	private getMyRatingPromise(recipeID: string, userID: string): Promise<number> {
 		if (userID) {return this.broker.call("v1.rating.getRatingForUser", {recipeID }, { meta: { user: { id: userID }}});}
 		else {return new Promise((resolve, reject) => {resolve(0);});}
+	}
+
+	private getImageUrlPromise(imageName: string): Promise<string> {
+		if (imageName === "NO_PIC") {return new Promise((resolve, reject) => {resolve("");});}
+		return this.broker.call("v1.photo.getImageUrl", { filename: imageName });
 	}
 }

@@ -16,7 +16,7 @@ export default class Connection implements Partial<ServiceSchema>, ThisType<Serv
 
 		this.schema = {
 			mixins: [DbService],
-			adapter: new MongoAdapter(process.env.MONGO_URI),
+			adapter: new MongoAdapter(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true }),
 			collection: this.collection,
 			events: {
 				/**

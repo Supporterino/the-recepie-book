@@ -3,7 +3,7 @@
 import {Context, Service, ServiceBroker, ServiceSchema} from "moleculer";
 import Connection from "../../mixins/db.mixin";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
-import { DatabaseError, GetSanitizedUserParams, IsLegitUserParams, MAX_PAGE_SIZE, OwnsRecipeParams, PAGE_SIZE, RecipeData, ServiceMeta, UserData } from "../../shared";
+import { DatabaseError, GetSanitizedUserParams, IsLegitUserParams, MAX_PAGE_SIZE, OwnsRecipeParams, PAGE_SIZE, RecipeData, ServiceMeta, UserAvatarUpdateParams, UserData } from "../../shared";
 import { User } from "../../types";
 
 export default class UserService extends Service {
@@ -26,12 +26,14 @@ export default class UserService extends Service {
 					"password",
 					"email",
 					"joinedAt",
+					"avatar",
 				],
 				entityValidator: {
 					username: "string",
 					password: "string",
 					email: { type: "email" },
 					joinedAt: { type: "date", convert: true },
+					avatar: { type: "string", default: "NO_PIC", optional: true },
 				},
 			},
 			actions: {
@@ -85,12 +87,30 @@ export default class UserService extends Service {
 					},
 				},
 			},
+			events: {
+				"user.newAvatar": {
+					params: {
+						userID: "string",
+						imageName: "string",
+					},
+					handler: async (ctx: Context<UserAvatarUpdateParams>) => {
+						const oldFile = (await ctx.call("v1.user.get", {id: ctx.params.userID}) as UserData).avatar;
+						await ctx.call("v1.user.update", { id: ctx.params.userID, avatar: ctx.params.imageName });
+						if (oldFile !== "NO_PIC") {ctx.emit("photo.delete", { fileName: oldFile });}
+					},
+				},
+			},
 		}, schema));
 	}
 
 	public async getSanitizedUser(userID: string): Promise<User> {
 		const user = await this.broker.call("v1.user.get", { id: userID }) as UserData;
-		return { id: user.id, username: user.username, joinedAt: user.joinedAt } as User;
+		return {
+			id: user.id,
+			username: user.username,
+			joinedAt: user.joinedAt,
+			avatar: (user.avatar !== "NO_PIC") ? await this.broker.call("v1.photo.getImageUrl", { filename: user.avatar }) : "",
+		} as User;
 	}
 
 	public async checkAuthentic(id: string, email: string): Promise<boolean> {

@@ -3,7 +3,7 @@
 import {Context, Service, ServiceBroker} from "moleculer";
 import Connection from "../../mixins/db.mixin";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
-import { FirstRatingParams, MAX_PAGE_SIZE, PAGE_SIZE, RecipeDeletionParams } from "../../shared";
+import { FirstRatingParams, MAX_PAGE_SIZE, PAGE_SIZE, RecipeData, RecipeDeletionParams, RecipePictureUpdateParams } from "../../shared";
 import { Units } from "../../types";
 export default class DataStoreService extends Service {
 	private DBConnection = new Connection("recipes").start();
@@ -28,6 +28,7 @@ export default class DataStoreService extends Service {
 					"rating",
 					"tags",
 					"owner",
+					"picture",
 					"creationTimestamp",
 					"updateTimestamp",
 				],
@@ -39,6 +40,7 @@ export default class DataStoreService extends Service {
 					rating: { type: "string", default: "", optional: true },
 					tags: {type: "array", items: "string"},
 					owner: "string",
+					picture: { type: "string", default: "NO_PIC", optional: true },
 					creationTimestamp: { type: "date", convert: true },
 					updateTimestamp: { type: "date", convert: true },
 				},
@@ -59,6 +61,17 @@ export default class DataStoreService extends Service {
 					},
 					handler: (ctx: Context<RecipeDeletionParams>) => {
 						ctx.call("v1.data-store.remove", { id: ctx.params.recipeID });
+					},
+				},
+				"recipe.newPicutre": {
+					params: {
+						recipeID: "string",
+						imageName: "string",
+					},
+					handler: async (ctx: Context<RecipePictureUpdateParams>) => {
+						const oldFile = (await ctx.call("v1.data-store.get", { id: ctx.params.recipeID }) as RecipeData).picture;
+						await ctx.call("v1.data-store.update", { id: ctx.params.recipeID, picture: ctx.params.imageName });
+						if (oldFile !== "NO_PIC") {ctx.emit("photo.delete", { fileName: oldFile });}
 					},
 				},
 			},
