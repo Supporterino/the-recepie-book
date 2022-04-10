@@ -9,6 +9,7 @@ export interface RecipeData {
 	tags: string[];
 	rating?: string;
 	owner: string;
+	picture: string;
 	creationTimestamp: Date;
 	updateTimestamp: Date;
 }

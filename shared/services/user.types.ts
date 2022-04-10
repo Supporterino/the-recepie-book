@@ -10,3 +10,8 @@ export interface OwnsRecipeParams {
 export interface GetSanitizedUserParams {
 	userID: string;
 }
+
+export interface UserAvatarUpdateParams {
+	userID: string;
+	imageName: string;
+}

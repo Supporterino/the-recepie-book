@@ -37,9 +37,7 @@ export default class RecipeCreationService extends Service {
 						steps: {type: "array", items: "string"},
 						tags: {type: "array", items: "string"},
 					},
-					async handler(ctx: Context<CreationData, ServiceMeta>): Promise<CreationResponse> {
-						return await this.createRecipe(ctx.params, ctx.meta.user.id);
-					},
+					handler: async (ctx: Context<CreationData, ServiceMeta>): Promise<CreationResponse> => await this.createRecipe(ctx.params, ctx.meta.user.id),
 				},
 			},
 		});

@@ -87,6 +87,47 @@ export default class ApiService extends Service {
 					},
 					mappingPolicy: "all", // Available values: "all", "restrict"
 					logging: true,
+				},
+				{
+					path: "/photosUpload",
+					bodyParsers: {
+						json: false,
+						urlencoded: false,
+					},
+					authorization: true,
+					aliases: {
+						"POST /": "multipart:v1.photo.save",
+					},
+					busboyConfig: {
+						limits: {
+							files: 1,
+						},
+					},
+					callOptions: {
+						timeout: 20000,
+						retries: 3,
+					},
+					mappingPolicy: "restrict",
+				},
+				{
+					path: "/photos",
+					bodyParsers: {
+						json: false,
+						urlencoded: false,
+					},
+					aliases: {
+						"GET /:name": "v1.photo.get",
+					},
+					busboyConfig: {
+						limits: {
+							files: 1,
+						},
+					},
+					callOptions: {
+						timeout: 20000,
+						retries: 3,
+					},
+					mappingPolicy: "restrict",
 				}],
 				log4XXResponses: false,
 				logRequestParams: null,

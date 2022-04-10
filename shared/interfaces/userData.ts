@@ -4,4 +4,5 @@ export interface UserData {
     email: string;
     password: string;
 	joinedAt: Date;
+	avatar: string;
 }

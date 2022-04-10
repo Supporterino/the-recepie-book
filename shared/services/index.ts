@@ -8,3 +8,5 @@ export * from "./recipe-provider.types";
 export * from "./cook-list.types";
 export * from "./favorite.types";
 export * from "./recent.types";
+export * from "./uploadMeta";
+export * from "./photo.types";

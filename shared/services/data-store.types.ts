@@ -6,3 +6,8 @@ export interface FirstRatingParams {
 export interface RecipeDeletionParams {
 	recipeID: string;
 }
+
+export interface RecipePictureUpdateParams {
+	recipeID: string;
+	imageName: string;
+}
