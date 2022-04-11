@@ -3,7 +3,7 @@
 import {Context, Service, ServiceBroker, ServiceSchema} from "moleculer";
 import Connection from "../../mixins/db.mixin";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
-import { DatabaseError, GetSanitizedUserParams, IsLegitUserParams, MAX_PAGE_SIZE, OwnsRecipeParams, PAGE_SIZE, RecipeData, ServiceMeta, UserAvatarUpdateParams, UserData } from "../../shared";
+import { ChangeUsernameParams, DatabaseError, GetSanitizedUserParams, IsLegitUserParams, MAX_PAGE_SIZE, OwnsRecipeParams, PAGE_SIZE, RecipeData, ServiceMeta, UserAvatarUpdateParams, UserData } from "../../shared";
 import { User } from "../../types";
 
 export default class UserService extends Service {
@@ -86,6 +86,16 @@ export default class UserService extends Service {
 						return await this.getSanitizedUser(ctx.params.userID);
 					},
 				},
+				changeUsername: {
+					rest: {
+						method: "POST",
+						path: "/changeUsername",
+					},
+					params: {
+						username: "string",
+					},
+					handler: async (ctx: Context<ChangeUsernameParams, ServiceMeta>): Promise<boolean> => await this.changeUsername(ctx.params.username, ctx.meta.user.id),
+				},
 			},
 			events: {
 				"user.newAvatar": {
@@ -101,6 +111,17 @@ export default class UserService extends Service {
 				},
 			},
 		}, schema));
+	}
+
+	public async changeUsername(username: string, userID: string): Promise<boolean> {
+		this.logger.info(`User[${userID}] Changing username to ${username}`);
+		try {
+			const updatedUser = await this.broker.call("v1.user.update", { id: userID, username}) as UserData;
+			if (updatedUser.username !== username) {return false;}
+			return true;
+		} catch (error) {
+			throw new DatabaseError(error.message || "Failed to update username.", error.code || 500, this.name);
+		}
 	}
 
 	public async getSanitizedUser(userID: string): Promise<User> {
