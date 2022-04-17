@@ -15,3 +15,7 @@ export interface UserAvatarUpdateParams {
 	userID: string;
 	imageName: string;
 }
+
+export interface ChangeUsernameParams {
+	username: string;
+}
