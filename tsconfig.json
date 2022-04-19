@@ -1,5 +1,6 @@
 {
 	"compilerOptions": {
+		"experimentalDecorators": true,
 		"module": "commonjs",
 		"esModuleInterop": true,
 		"noImplicitAny": true,
@@ -7,7 +8,7 @@
 		"preserveConstEnums": true,
 		"sourceMap": true,
 		"pretty": true,
-		"target": "es6",
+		"target": "es2017",
 		"outDir": "dist"
 	},
 	"include": ["./**/*"],

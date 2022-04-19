@@ -3,8 +3,8 @@
 import {Context, Service, ServiceBroker, ServiceSchema} from "moleculer";
 import Connection from "../../mixins/db.mixin";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
-import { ChangeUsernameParams, DatabaseError, GetSanitizedUserParams, IsLegitUserParams, MAX_PAGE_SIZE, OwnsRecipeParams, PAGE_SIZE, RecipeData, ServiceMeta, UserAvatarUpdateParams, UserData } from "../../shared";
-import { User } from "../../types";
+import { DatabaseError, GetSanitizedUserParams, IsLegitUserParams, MAX_PAGE_SIZE, OwnsRecipeParams, PAGE_SIZE, RecipeData, ServiceMeta, UserAvatarUpdateParams, UserData, ChangeUsernameParams } from "../../shared";
+import { Role, User } from "../../types";
 
 export default class UserService extends Service {
     private DBConnection = new Connection("users").start();
@@ -27,6 +27,7 @@ export default class UserService extends Service {
 					"email",
 					"joinedAt",
 					"avatar",
+					"role",
 				],
 				entityValidator: {
 					username: "string",
@@ -34,6 +35,7 @@ export default class UserService extends Service {
 					email: { type: "email" },
 					joinedAt: { type: "date", convert: true },
 					avatar: { type: "string", default: "NO_PIC", optional: true },
+					role: { type: "enum", values: Object.values(Role) },
 				},
 			},
 			actions: {
@@ -131,6 +133,7 @@ export default class UserService extends Service {
 			username: user.username,
 			joinedAt: user.joinedAt,
 			avatar: (user.avatar !== "NO_PIC") ? await this.broker.call("v1.photo.getImageUrl", { filename: user.avatar }) : "",
+			role: user.role,
 		} as User;
 	}
 
