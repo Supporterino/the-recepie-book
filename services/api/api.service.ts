@@ -62,7 +62,9 @@ export default class ApiService extends Service {
 				},{
 					path: "/api",
 					whitelist: [
-						"v1.auth.*",
+						"v1.auth.login",
+						"v1.auth.register",
+						"v1.auth.refreshToken",
 						"v1.recipe-provider.*",
 						"v1.tags.getByString",
 						"v1.tags.list",

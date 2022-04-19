@@ -38,19 +38,6 @@ services:
     networks:
       - internal
 
-  recipe:
-    build:
-      context: .
-    image: the-recipe-book
-    env_file: docker-compose.env
-    environment:
-      SERVICES: recipe
-    depends_on:
-      - mongo
-      - nats
-    networks:
-      - internal
-
   auth:
     build:
       context: .
@@ -122,7 +109,7 @@ services:
     networks:
       - internal
     ports:
-      - 27017:27017
+      - 27018:27017
 
   nats:
     image: nats:2
@@ -138,7 +125,7 @@ services:
       - "--entrypoints.web.address=:80"
     ports:
       - 3000:80
-      - 3001:8080
+      - 3080:8080
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:

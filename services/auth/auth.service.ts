@@ -1,12 +1,11 @@
 "use strict";
 
 import {Context, Errors, Service, ServiceBroker} from "moleculer";
-import { sign, verify, VerifyErrors } from "jsonwebtoken";
-import { hash, compare } from "bcrypt";
-import { Auth, LoginResponse, User } from "../../types";
-import { DatabaseError } from "../../shared";
+import { verify } from "jsonwebtoken";
+import { hash } from "bcrypt";
+import { Auth, LoginResponse, Role } from "../../types";
+import { Authenticate, AuthError, BaseError, DatabaseError, LoginServiceResponse, RefreshToken, RegisterParams, RevokeToken, ServiceMeta, UserData } from "../../shared";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
-import { UserData } from "../../shared/interfaces/userData";
 
 export default class AuthService extends Service {
 	private JWT_SECRET: string = process.env.JWT_SECRET;
@@ -19,14 +18,6 @@ export default class AuthService extends Service {
             version: 1,
 			mixins: [ErrorMixin],
 			actions: {
-				/**
-				 * Logs a user in by giving him a valid JWT token. A user is authenticated, when the password matches the one stored in the database for that email.
-				 *
-				 * @method
-				 * @param {String} email - the email address of the user
-				 * @param {String} password - the password to check against the salt in the DB
-				 * @returns {String | Errors.MoleculerError} - The JWT token or a invalid credentrials error
-				 */
 				login: {
 					rest: {
 						path: "/login",
@@ -36,19 +27,8 @@ export default class AuthService extends Service {
 						email: { type: "email", normalize: true },
 						password: "string",
 					},
-					async handler(ctx): Promise<LoginResponse | Errors.MoleculerError> {
-						return await this.login(ctx);
-					},
+					handler: async (ctx: Context<Authenticate>): Promise<LoginResponse> => await this.login(ctx),
 				},
-				/**
-				 * Checks if the user already exists. If not the password is hashed and the new user is safed in the user database.
-				 *
-				 * @method
-				 * @param {String} username - The name of the new account
-				 * @param {String} password - The password for the new account
-				 * @param {String} email - The email to link to the account, has to be unique over all accounts
-				 * @returns {String | Errors.MoleculerError} - A string to indicate successful registration or an error if the email is already in use
-				 */
 				register: {
 					rest: {
 						path: "/register",
@@ -59,17 +39,29 @@ export default class AuthService extends Service {
 						password: "string",
 						email: { type: "email", normalize: true },
 					},
-					async handler(ctx): Promise<string | Errors.MoleculerError> {
-						return await this.register(ctx);
-					},
+					handler: async (ctx: Context<RegisterParams>): Promise<string> => await this.register(ctx),
 				},
-				/**
-				 * Checks if a JWT token is valid and if it isn't expired it returns the encoded {@link Auth} data.
-				 *
-				 * @method
-				 * @param {String} token - The token to validate and extract
-				 * @returns {Auth} - The decoded {@link Auth} data
-				 */
+				refreshToken: {
+					rest: {
+						path: "/refreshToken",
+						method: "POST",
+					},
+					params: {
+						token: "string",
+					},
+					handler: async (ctx: Context<RefreshToken>): Promise<LoginResponse> => await this.refreshToken(ctx),
+				},
+
+				revokeToken: {
+					rest: {
+						path: "/revokeToken",
+						method: "POST",
+					},
+					params: {
+						token: "string",
+					},
+					handler: async (ctx: Context<RevokeToken, ServiceMeta>): Promise<void> => await this.revokeToken(ctx),
+				},
 				resolveToken: {
 					cache: {
 						keys: ["token"],
@@ -78,77 +70,79 @@ export default class AuthService extends Service {
 					params: {
 						token: "string",
 					},
-					handler(ctx): PromiseLike<Auth | Promise<Auth>> {
-						return this.resolveToken(ctx);
-					},
+					handler: (ctx): PromiseLike<Auth> => this.resolveToken(ctx),
 				},
 			},
 		});
 	}
 
-	public async register(ctx: Context<any>): Promise<string | Errors.MoleculerError> {
-		this.logger.info("Checking if user is already registered.", ctx.params.email);
-		const oldUser = await this.getUser(ctx.params.email);
+	public async register(ctx: Context<RegisterParams>): Promise<string> {
+		const [username, email, password] = [ctx.params.username, ctx.params.email, ctx.params.password];
+		this.logger.info("Checking if user is already registered.", email);
+		const oldUser = await this.getUser(email, ctx);
 
 		if (oldUser) {
 			this.logger.warn(`${oldUser.email} has already a registered account.`);
-			return Promise.reject(new Errors.MoleculerError("E-Mail already exists. Please login!", 409));
+			throw new Errors.MoleculerError("E-Mail already exists. Please login!", 409);
 		}
+
 		const user = {
-			username: ctx.params.username,
-			password: await hash(ctx.params.password, this.SALT_ROUNDS),
-			email: ctx.params.email,
+			username,
+			password: await hash(password, this.SALT_ROUNDS),
+			email,
 			joinedAt: new Date(),
+			role: (await ctx.call("v1.user.count") === 0)? Role.ADMIN : Role.USER, // First user is admin
 		} as UserData;
 		try {
 			this.logger.info(`Creating new account(${user.username}) for email: ${user.email}`);
-			await this.broker.call("v1.user.create", { username: user.username, password: user.password, email: user.email, joinedAt: user.joinedAt });
+			await ctx.call("v1.user.create", user);
 			return `User[${user.username}] created.`;
 		} catch (error) {
 			throw new DatabaseError(error.message || "Creation of user failed.", error.code || 500, "user");
 		}
 	}
 
-	public resolveToken(ctx: Context<any>): PromiseLike<Auth | Promise<Auth>> {
-		return new this.Promise((resolve, reject) => {
-			verify(ctx.params.token, this.JWT_SECRET, (err: VerifyErrors, decoded: Auth) => {
-				if (err) {
-					return reject(err);
-				}
-				resolve(decoded);
-			});
-		}).then(async (decoded: Auth) => {
-			if (decoded.id && await this.broker.call("v1.user.isLegitUser", { userID: decoded.id, email: decoded.email })) {
-				return decoded;
-			}
-		});
-	}
-
-	public async login(ctx: Context<any>): Promise<LoginResponse | Errors.MoleculerError> {
-		const user = await this.getUser(ctx.params.email);
-
-		if (user && await compare(ctx.params.password, user.password)) {
-			this.logger.info(`${ctx.params.email} logged in.`);
-			return {
-				token: this.generateToken(user),
-				userID: user.id,
-				msg: "Login successful",
-			} as LoginResponse;
-		} else {
-			this.logger.warn("Wrong password for user.", ctx.params.email);
-			return Promise.reject(new Errors.MoleculerError("Invalid Credentials", 400));
+	public async resolveToken(ctx: Context<any>): Promise<Auth> {
+		try {
+			const authData = verify(ctx.params.token, this.JWT_SECRET) as Auth;
+			if (!authData) {throw new Errors.MoleculerError("No Data encoded in this token", 500);}
+			if (!authData.id) {throw new Errors.MoleculerError("No ID encoded in this token", 500);}
+			if (!(await ctx.call("v1.user.isLegitUser", { userID: authData.id, email: authData.email }))) {throw new Errors.MoleculerError("The encoded user ID and email do not match a user in the DB.", 401);}
+			return authData;
+		} catch (error) {
+			if (error instanceof BaseError) {throw error;}
+			else {throw new AuthError(error.message || "Failed to resolve JWT", error.code || 500);}
 		}
 	}
 
-	private generateToken(user: UserData): string {
-		this.logger.info(`Generating token for ${user.email}`);
-		return sign({ id:user.id, email: user.email } as Auth, this.JWT_SECRET, { expiresIn: "6h" });
+	public async refreshToken(ctx: Context<RefreshToken>): Promise<LoginResponse> {
+		const loginData = await ctx.call("v1.login.refreshToken", { token: ctx.params.token }) as LoginServiceResponse;
+		return {
+			jwtToken: loginData.jwtToken,
+			userID: loginData.user.id,
+			refreshToken: loginData.refreshToken,
+			msg: "Login successful",
+		} as LoginResponse;
 	}
 
-	private async getUser(email: string): Promise<UserData> {
+	public async revokeToken(ctx: Context<RevokeToken, ServiceMeta>): Promise<void> {
+		await ctx.call("v1.login.revokeToken", { token: ctx.params.token });
+	}
+
+	public async login(ctx: Context<Authenticate>): Promise<LoginResponse> {
+		const loginData = await ctx.call("v1.login.authenticate", { email: ctx.params.email, password: ctx.params.password }) as LoginServiceResponse;
+		return {
+			jwtToken: loginData.jwtToken,
+			userID: loginData.user.id,
+			refreshToken: loginData.refreshToken,
+			msg: "Login successful",
+		} as LoginResponse;
+	}
+
+	private async getUser(email: string, ctx: Context<any>): Promise<UserData> {
 		this.logger.info(`Loading user data for user: ${email}`);
 		try {
-			const user = (await this.broker.call("v1.user.find", { query: { email } }) as UserData[])[0];
+			const user = (await ctx.call("v1.user.find", { query: { email } }) as UserData[])[0];
 			return user;
 		} catch (error) {
 			throw new DatabaseError(error.message || "Couldn't load user via its email address.", error.code || 500, "user");

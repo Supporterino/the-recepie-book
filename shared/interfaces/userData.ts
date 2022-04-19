@@ -1,3 +1,5 @@
+import { Role } from "../../types";
+
 export interface UserData {
     id?: string;
     username: string;
@@ -5,4 +7,5 @@ export interface UserData {
     password: string;
 	joinedAt: Date;
 	avatar: string;
+	role: Role;
 }
