@@ -31,28 +31,13 @@ export default class FavoriteService extends Service {
 				},
 			},
 			actions: {
-				/**
-				 * Get's the favorites for user making the request. User id is sourced from meta payload.
-				 *
-				 * @method
-				 * @returns {Array<Recipe>} - The favorited recipes of the user
-				 */
 				getOwnFavorites: {
 					rest: {
 						path: "/getOwnFavorites",
 						method: "GET",
 					},
-					async handler(ctx: Context<null, ServiceMeta>): Promise<Recipe[]> {
-						return await this.getFavorites(ctx.meta.user.id, ctx.meta);
-					},
+					handler: async (ctx: Context<null, ServiceMeta>): Promise<Recipe[]> => await this.getFavorites(ctx),
 				},
-				/**
-				 * Get the favorites of any user.
-				 *
-				 * @method
-				 * @param {String} id - the user id to fetch favorites from
-				 * @returns {Array<Recipe>} - The favorited recipes of the user
-				 */
 				getFavorites: {
 					rest: {
 						path: "/getFavorites",
@@ -61,17 +46,8 @@ export default class FavoriteService extends Service {
 					params: {
 						userID: "string",
 					},
-					async handler(ctx: Context<GetFavoriteParams, ServiceMeta>): Promise<Recipe[]> {
-						return await this.getFavorites(ctx.params.userID, ctx.meta);
-					},
+					handler: async (ctx: Context<null, ServiceMeta>): Promise<Recipe[]> => await this.getFavorites(ctx),
 				},
-				/**
-				 * Adds a new recipe to the favorites of the user.
-				 *
-				 * @method
-				 * @param {String} recipeID - The id of the recipe to add.
-				 * @returns {FavoriteResponse}
-				 */
 				addFavorite: {
 					rest: {
 						path: "/addFavorite",
@@ -80,17 +56,8 @@ export default class FavoriteService extends Service {
 					params: {
 						recipeID: "string",
 					},
-					async handler(ctx: Context<AddFavoriteParams, ServiceMeta>): Promise<FavoriteResponse> {
-						return await this.addFavorite(ctx.meta.user.id, ctx.params.recipeID);
-					},
+					handler: async (ctx: Context<AddFavoriteParams, ServiceMeta>): Promise<FavoriteResponse> => this.addFavorite(ctx),
 				},
-				/**
-				 * Remove a new recipe fromt the favorites of the user.
-				 *
-				 * @method
-				 * @param {String} recipeID - The id of the recipe to remove.
-				 * @returns {FavoriteResponse}
-				 */
 				removeFavorite: {
 					rest: {
 						path: "/removeFavorite",
@@ -99,18 +66,9 @@ export default class FavoriteService extends Service {
 					params: {
 						recipeID: "string",
 					},
-					async handler(ctx: Context<RemoveFavoriteParams, ServiceMeta>): Promise<FavoriteResponse> {
-						return await this.removeFavorite(ctx.meta.user.id, ctx.params.recipeID);
-					},
+					handler: async (ctx: Context<RemoveFavoriteParams, ServiceMeta>): Promise<FavoriteResponse> => await this.removeFavorite(ctx),
 				},
-				/**
-				 * Check if a recipe is favorited
-				 *
-				 * @method
-				 * @param {String} recipeID - The id of the recipe to check.
-				 * @returns {FavoriteResponse}
-				 */
-				 isFavorite: {
+				isFavorite: {
 					rest: {
 						path: "/isFavorited",
 						method: "POST",
@@ -118,46 +76,43 @@ export default class FavoriteService extends Service {
 					params: {
 						recipeID: "string",
 					},
-					async handler(ctx: Context<IsFavoriteParams, ServiceMeta>): Promise<boolean> {
-						return await this.isFavorite(ctx.meta.user.id, ctx.params.recipeID);
-					},
+					handler: async (ctx: Context<IsFavoriteParams, ServiceMeta>): Promise<boolean> => await this.isFavorite(ctx),
 				},
 			},
 			events: {
-				/**
-				 * Event to handle the deletion of {@link FavoriteData} when a recipe is deleted.
-				 *
-				 * @event
-				 */
 				"recipe.deletion": {
 					params: {
 						recipeID: "string",
 					},
-					handler: async (ctx: Context<RecipeDeletionParams>) => {
-						const userIds = (await ctx.call("v1.favorite.find", { fields: "userid" }) as FavoriteData[]).map(e => e.userid);
-						for (const id of userIds) {
-							this.removeFavorite(id, ctx.params.recipeID);
-						}
-					},
+					handler: async (ctx: Context<RecipeDeletionParams, ServiceMeta>) => this["recipe.deletion"](ctx),
 				},
 			},
 		}, schema));
 	}
 
-	public async isFavorite(userID: string, recipeID: string): Promise<boolean> {
-		const favoriteData = (await this.getFavoriteData(userID));
+	public async "recipe.deletion"(ctx: Context<RecipeDeletionParams, ServiceMeta>): Promise<void> {
+		const userIds = (await ctx.call("v1.favorite.find", { fields: "userid" }) as FavoriteData[]).map(e => e.userid);
+		for (const id of userIds) {
+			this.removeFavorite(ctx, id, ctx.params.recipeID);
+		}
+	}
+
+	public async isFavorite(ctx: Context<IsFavoriteParams, ServiceMeta>): Promise<boolean> {
+		const [ userID, recipeID ] = [ ctx.meta.user.id, ctx.params.recipeID ];
+		const favoriteData = (await this.getFavoriteData(userID, ctx));
 		if (!favoriteData) {return false;}
 		return favoriteData.favorites.findIndex(entry => entry === recipeID) !== -1;
 	}
 
-	public async getFavorites(userID: string, meta: ServiceMeta = null): Promise<Recipe[]> {
-		const favoriteData = (await this.getFavoriteData(userID));
+	public async getFavorites(ctx: Context<GetFavoriteParams, ServiceMeta>): Promise<Recipe[]> {
+		const userID = ctx.params?.userID || ctx.meta.user.id;
+		const favoriteData = (await this.getFavoriteData(userID, ctx));
 		const out = new Array<Recipe>();
 		if (!favoriteData) {return out;}
 		for (const id of favoriteData.favorites) {
 			try {
 				this.logger.info(`User[${userID}] Getting recipe for recipe id: ${id}`);
-				out.push(await this.broker.call("v1.recipe-provider.getById", { recipeID: id }, { meta }));
+				out.push(await ctx.call("v1.recipe-provider.getById", { recipeID: id }));
 			} catch (error) {
 				if (error instanceof BaseError) {throw error;}
 				else {
@@ -168,8 +123,9 @@ export default class FavoriteService extends Service {
 		return out;
 	}
 
-	public async addFavorite(userID: string, recipeID: string): Promise<FavoriteResponse> {
-		const favoritesOfUser = await this.getFavoriteData(userID);
+	public async addFavorite(ctx: Context<AddFavoriteParams, ServiceMeta>): Promise<FavoriteResponse> {
+		const [ userID, recipeID ] = [ ctx.meta.user.id, ctx.params.recipeID ];
+		const favoritesOfUser = await this.getFavoriteData(userID, ctx);
 		if (favoritesOfUser) {
 			if (favoritesOfUser.favorites.indexOf(recipeID) !== -1) {
 				this.logger.warn(`User[${userID}] tried to add recipe (${recipeID}) which is already present.`);
@@ -178,7 +134,7 @@ export default class FavoriteService extends Service {
 			favoritesOfUser.favorites.push(recipeID);
 			try {
 				this.logger.info(`User[${userID}] Adding to favorites: ${recipeID}`);
-				await this.broker.call("v1.favorite.update", { id: favoritesOfUser.id, favorites: favoritesOfUser.favorites });
+				await ctx.call("v1.favorite.update", { id: favoritesOfUser.id, favorites: favoritesOfUser.favorites });
 				return { success: true, method: "add", msg: `Recipe (${recipeID}) add to users (${userID}) favorites` } as FavoriteResponse;
 			} catch (error) {
 				throw new DatabaseError(error.message || "Update call via add failed.", error.code || 500, this.name);
@@ -186,7 +142,7 @@ export default class FavoriteService extends Service {
 		} else {
 			try {
 				this.logger.info(`User[${userID}] Creating new FavoriteData for user.`);
-				await this.broker.call("v1.favorite.create", { userid: userID, favorites: [recipeID] });
+				await ctx.call("v1.favorite.create", { userid: userID, favorites: [recipeID] });
 				return { success: true, method: "add", msg: `Created favorites for user (${userID}) with recipe (${recipeID})` } as FavoriteResponse;
 			} catch (error) {
 				throw new DatabaseError(error.message || "Creation of FavoriteData failed.", error.code || 500, this.name);
@@ -194,8 +150,9 @@ export default class FavoriteService extends Service {
 		}
 	}
 
-	public async removeFavorite(userID: string, recipeID: string): Promise<FavoriteResponse> {
-		const favoritesOfUser = await this.getFavoriteData(userID);
+	public async removeFavorite(ctx: Context<RemoveFavoriteParams, ServiceMeta>, userID?: string, recipeID?: string): Promise<FavoriteResponse> {
+		if (!userID && !recipeID ) { [ userID, recipeID ] = [ ctx.meta.user.id, ctx.params.recipeID ]; }
+		const favoritesOfUser = await this.getFavoriteData(userID, ctx);
 		if (favoritesOfUser) {
 			const index = favoritesOfUser.favorites.indexOf(recipeID);
 			if (index === -1) {
@@ -205,7 +162,7 @@ export default class FavoriteService extends Service {
 			favoritesOfUser.favorites.splice(index, 1);
 			try {
 				this.logger.info(`User[${userID}] Removing recipe: ${recipeID}`);
-				await this.broker.call("v1.favorite.update", { id: favoritesOfUser.id, favorites: favoritesOfUser.favorites });
+				await ctx.call("v1.favorite.update", { id: favoritesOfUser.id, favorites: favoritesOfUser.favorites });
 				return { success: true, method: "remove", msg: `Remove recipe from user(${userID}) favorites`} as FavoriteResponse;
 			} catch (error) {
 				throw new DatabaseError(error.message || "Updating of favorite data failed (update call).", error.code || 500, this.name);
@@ -216,10 +173,10 @@ export default class FavoriteService extends Service {
 		}
 	}
 
-	private async getFavoriteData(userID: string): Promise<FavoriteData> {
+	private async getFavoriteData(userID: string, ctx: Context<any, any>): Promise<FavoriteData> {
 		this.logger.info(`User[${userID}] Getting FavoriteData`);
 		try {
-			const data = (await this.broker.call("v1.favorite.find", { query: { userid: userID } }) as FavoriteData[])[0];
+			const data = (await ctx.call("v1.favorite.find", { query: { userid: userID } }) as FavoriteData[])[0];
 			return data;
 		} catch (error) {
 			throw new DatabaseError(error.message || "Fetching of data via find failed", error.code || 500, this.name);

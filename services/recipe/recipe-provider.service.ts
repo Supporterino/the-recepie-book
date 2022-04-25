@@ -14,13 +14,6 @@ export default class RecipeProviderService extends Service {
             version: 1,
 			mixins: [ErrorMixin],
 			actions:{
-				/**
-				 * Returns a recipe by its ID inside the DB
-				 *
-				 * @method
-				 * @param {String} recipeID - The id of the recipe to return
-				 * @returns {RecipeData} - The recipe as JSON string
-				 */
 				getById: {
 					rest: {
 						path: "/getById",
@@ -29,17 +22,8 @@ export default class RecipeProviderService extends Service {
 					params: {
 						recipeID: {type: "string", min: 2},
 					},
-					async handler(ctx: Context<GetByIdParams, ServiceMeta>): Promise<RecipeData> {
-						return await this.getRecipeByID(ctx.params.recipeID);
-					},
+					handler: async (ctx: Context<GetByIdParams, ServiceMeta>): Promise<RecipeData> => await this.getById(ctx),
 				},
-				/**
-				 * Returns all recipes of a user
-				 *
-				 * @method
-				 * @param {String} recipeID - The id of the user to return from
-				 * @returns {RecipeData} - The recipe as JSON string
-				 */
 				 getFromUser: {
 					rest: {
 						path: "/getFromUser",
@@ -48,32 +32,15 @@ export default class RecipeProviderService extends Service {
 					params: {
 						userID: "string",
 					},
-					async handler(ctx: Context<GetFromUserParams, ServiceMeta>): Promise<RecipeData[]> {
-						return await this.getRecipesByUser(ctx.params.userID);
-					},
+					handler: async (ctx: Context<GetFromUserParams, ServiceMeta>): Promise<RecipeData[]> => await this.getFromUser(ctx),
 				},
-				/**
-				 * Returns all recipes for me
-				 *
-				 * @method
-				 * @returns {RecipeData} - The recipe as JSON string
-				 */
 				 getMyRecipes: {
 					rest: {
 						path: "/getMyRecipes",
 						method: "GET",
 					},
-					async handler(ctx: Context<null, ServiceMeta>): Promise<RecipeData[]> {
-						return await this.getRecipesByUser(ctx.meta.user.id);
-					},
+					handler: async (ctx: Context<null, ServiceMeta>): Promise<RecipeData[]> => await this.getFromUser(ctx),
 				},
-				/**
-				 * Returns a list of recipes matching the provided string in their title
-				 *
-				 * @method
-				 * @param {String} name - The string to search inside of the recipe titles
-				 * @returns {Array<RecipeData>} - A list of matching recipes as JSON string
-				 */
 				getByName: {
 					rest: {
 						path: "/getByName",
@@ -82,18 +49,8 @@ export default class RecipeProviderService extends Service {
 					params: {
 						name: {type: "string", min: 2},
 					},
-					async handler(ctx: Context<GetByNameParams, ServiceMeta>): Promise<RecipeData[]> {
-						return await this.getRecipesByName(ctx.params.name);
-					},
+					handler: async (ctx: Context<GetByNameParams, ServiceMeta>): Promise<RecipeData[]> => await this.getByName(ctx),
 				},
-				/**
-				 * Return a list of recipes matching one or all tags depending on the `intersect` parameter
-				 *
-				 * @method
-				 * @param {Array<string>} tags - A list of tag names to match against the database
-				 * @param {Boolean} intersect - Indicator if all or just one tag needs to be matched
-				 * @returns {Array<RecipeData>} - A list of matching recipes as JSON string
-				 */
 				getByTags: {
 					rest: {
 						path: "/getByTags",
@@ -103,17 +60,8 @@ export default class RecipeProviderService extends Service {
 						tags: {type: "array", min: 1, items: "string"},
 						intersect: {type: "boolean", optional: true, default: false},
 					},
-					async handler(ctx: Context<GetByTagsParams, ServiceMeta>): Promise<RecipeData[]> {
-						return await this.getRecipesByTags(ctx.params.tags, ctx.params.intersect);
-					},
+					handler: async (ctx: Context<GetByTagsParams, ServiceMeta>): Promise<RecipeData[]> => await this.getByTags(ctx),
 				},
-				/**
-				 * Returns all recipes with a higher rating than the provided number
-				 *
-				 * @method
-				 * @param {number} rating - The minium rating of the recipes
-				 * @returns {Array<RecipeData>} - A list of matching recipes as JSON string
-				 */
 				getByMinRating: {
 					rest: {
 						path: "/getByMinRating",
@@ -122,19 +70,8 @@ export default class RecipeProviderService extends Service {
 					params: {
 						rating: {type: "number"},
 					},
-					async handler(ctx: Context<GetByMinRatingParams, ServiceMeta>): Promise<RecipeData[]> {
-						return await this.getRecipesByRating(ctx.params.rating);
-					},
+					handler: async (ctx: Context<GetByMinRatingParams, ServiceMeta>): Promise<RecipeData[]> => await this.getByMinRating(ctx),
 				},
-				/**
-				 * Filters all recipes by multiple parameters
-				 *
-				 * @method
-				 * @param {String} text - String to be inside the name of a recipe
-				 * @param {Number} ratingMin - The minium rating a recipe should have
-				 * @param {Array<string>} tags - A list of tags the recipe should habe
-				 * @returns {Array<RecipeData>} - A list of matching recipes as JSON string
-				 */
 				filter: {
 					rest: {
 						path: "/filter",
@@ -145,24 +82,14 @@ export default class RecipeProviderService extends Service {
 						ratingMin: {type: "number"},
 						tags: {type: "array", items:"string"},
 					},
-					async handler(ctx: Context<FilterParams, ServiceMeta>): Promise<RecipeData[]> {
-						return await this.filterRecipes(ctx.params.text, ctx.params.ratingMin, ctx.params.tags);
-					},
+					handler: async (ctx: Context<FilterParams, ServiceMeta>): Promise<RecipeData[]> => await this.filterRecipes(ctx),
 				},
-				/**
-				 * Get's a list of 25 featured recipes from the data-store
-				 *
-				 * @method
-				 * @returns {Array<RecipeData>}
-				 */
 				getFeaturedRecipes: {
 					rest: {
 						path: "/featuredRecipes",
 						method: "GET",
 					},
-					async handler(ctx: Context<null, ServiceMeta>): Promise<RecipeData[]> {
-						return await this.getFeatured();
-					},
+					handler: async (ctx: Context<null, ServiceMeta>): Promise<RecipeData[]> => await this.getFeaturedRecipes(ctx),
 				},
 			},
 			hooks: {
@@ -176,53 +103,56 @@ export default class RecipeProviderService extends Service {
 	}
 
 	public async recipeDataConversion(ctx: Context<any, any>, res: RecipeData[] | RecipeData): Promise<Recipe | Recipe[]> {
-		if (res.constructor.name === "Array") {return await this.broker.call("v1.id-converter.convertRecipes", { recipes: res }, { meta: ctx.meta }) as Recipe[];}
-		else {return await this.broker.call("v1.id-converter.convertRecipe", { recipe: res }, { meta: ctx.meta }) as Recipe;}
+		if (res.constructor.name === "Array") {return await ctx.call("v1.id-converter.convertRecipes", { recipes: res }, { meta: ctx.meta }) as Recipe[];}
+		else {return await ctx.call("v1.id-converter.convertRecipe", { recipe: res }, { meta: ctx.meta }) as Recipe;}
 	}
 
-	public async getRecipesByUser(userID: string): Promise<RecipeData[]> {
+	public async getFromUser(ctx: Context<GetFromUserParams, ServiceMeta>): Promise<RecipeData[]> {
+		const userID = ctx.params.userID || ctx.meta.user.id;
 		this.logger.info(`Fetching recipe for user: ${userID}`);
 		try {
-			return  await this.broker.call("v1.data-store.find", { query: { owner: userID } }) as RecipeData[];
+			return  await ctx.call("v1.data-store.find", { query: { owner: userID } }) as RecipeData[];
 		} catch (error) {
 			throw new FilterError(error.message || "Failed to fetch RecipeData from data-store", error.code || 500, FilterType.USER);
 		}
 	}
 
-	public async getFeatured(): Promise<RecipeData[]> {
+	public async getFeaturedRecipes(ctx: Context<null, ServiceMeta>): Promise<RecipeData[]> {
 		try {
 			// Develop cool idea to get good recipes for requesting user
-			const count = await this.broker.call("v1.data-store.count");
+			const count = await ctx.call("v1.data-store.count");
 			if (count <= 25) {
-				return await this.broker.call("v1.data-store.find");
+				return await ctx.call("v1.data-store.find");
 			} else {
-				return await this.broker.call("v1.data-store.find", { limit: 25 });
+				return await ctx.call("v1.data-store.find", { limit: 25 });
 			}
 		} catch (error) {
 			throw new DatabaseError(error.message || "Failed to fetch featured recipes.", error.code || 500, "data-store");
 		}
 	}
 
-	public async filterRecipes(name: string, rating: number, tags: string[]): Promise<RecipeData[]> {
+	public async filterRecipes(ctx: Context<FilterParams, ServiceMeta>): Promise<RecipeData[]> {
+		const [ name, rating, tags ] = [ ctx.params.text, ctx.params.ratingMin, ctx.params.tags ];
 		this.logger.info("Filtering with following settings:", name, rating, tags);
-		if (name === "" && tags.length === 0 && rating === 0) {return await this.getFeatured();}
+		if (name === "" && tags.length === 0 && rating === 0) {return await ctx.call("v1.recipe-provider.getFeaturedRecipes");}
 		else if (name === "" && tags.length === 0 && rating > 0) {return await this.getRecipesByRating(rating);}
 		else if (name !== "" && tags.length === 0 && rating === 0) {return await this.getRecipesByName(name);}
-		else if (name !== "" && tags.length === 0 && rating > 0) {return await this.getByNameAndRating(name, rating);}
-		else if (name === "" && tags.length > 0 && rating === 0) {return await this.getRecipesByTags(tags, true);}
-		else if (name === "" && tags.length > 0 && rating > 0) {return await this.getByRatingAndTags(rating, tags);}
-		else if (name !== "" && tags.length > 0 && rating === 0) {return await this.getByNameAndTags(name, tags);}
-		else if (name !== "" && tags.length > 0 && rating > 0) {return await this.getByNameAndRatingAndTags(name, rating, tags);}
+		else if (name !== "" && tags.length === 0 && rating > 0) {return await this.getByNameAndRating(name, rating, ctx);}
+		else if (name === "" && tags.length > 0 && rating === 0) {return await ctx.call("v1.recipe-provider.getByTags", { tags, intersect: true });}
+		else if (name === "" && tags.length > 0 && rating > 0) {return await this.getByRatingAndTags(rating, tags, ctx);}
+		else if (name !== "" && tags.length > 0 && rating === 0) {return await this.getByNameAndTags(name, tags, ctx);}
+		else if (name !== "" && tags.length > 0 && rating > 0) {return await this.getByNameAndRatingAndTags(name, rating, tags, ctx);}
 		else {
 			throw new FilterError("The provided filters do not match any allowed combination.", 400, FilterType.FULL);
 		}
 	}
 
-	public async getRecipesByRating(rating: number): Promise<RecipeData[]> {
+	public async getByMinRating(ctx: Context<GetByMinRatingParams, ServiceMeta>): Promise<RecipeData[]> {
+		const rating = ctx.params.rating;
 		this.logger.info(`Fetching recipes with rating over ${rating}`);
 		try {
-			const possibleIDs = await this.getPossibleIDsForRating(rating);
-			return await this.broker.call("v1.data-store.get", { id: possibleIDs }) as RecipeData[];
+			const possibleIDs = await this.getPossibleIDsForRating(rating, ctx);
+			return await ctx.call("v1.data-store.get", { id: possibleIDs }) as RecipeData[];
 		} catch (error) {
 			if (error instanceof BaseError) {throw error;}
 			else {
@@ -231,12 +161,13 @@ export default class RecipeProviderService extends Service {
 		}
 	}
 
-	public async getRecipesByTags(tags: string[], intersect: boolean): Promise<RecipeData[]> {
-		const tagIDs = await this.convertTagsInIDs(tags);
+	public async getByTags(ctx: Context<GetByTagsParams, ServiceMeta>): Promise<RecipeData[]> {
+		const [ tags, intersect ] = [ ctx.params.tags, ctx.params.intersect ];
+		const tagIDs = await this.convertTagsInIDs(tags, ctx);
 		this.logger.info(`Fetching recipes for multiple tags (intersected=${intersect}): ${tags}`);
 		let out = Array<RecipeData>();
 		for (const tag of tagIDs) {
-			out = out.concat(await this.getRecipesByTag(tag));
+			out = out.concat(await this.getRecipesByTag(tag, ctx));
 		}
 		if (intersect) {
 			this.logger.debug("Intersecting all tags in array", out);
@@ -245,29 +176,31 @@ export default class RecipeProviderService extends Service {
 		return  out;
 	}
 
-	public async getRecipesByName(name: string): Promise<RecipeData[]> {
+	public async getByName(ctx: Context<GetByNameParams, ServiceMeta>): Promise<RecipeData[]> {
+		const name = ctx.params.name;
 		this.logger.info(`Fetching recipes with name which includes: ${name}`);
 		try {
-			return await this.broker.call("v1.data-store.find", { query: { name: { $regex: name, $options: "i" } } }) as RecipeData[];
+			return await ctx.call("v1.data-store.find", { query: { name: { $regex: name, $options: "i" } } }) as RecipeData[];
 		} catch (error) {
 			throw new FilterError(error.message || "Failed to fetch RecipeData from data-store", error.code || 500, FilterType.NAME);
 		}
 	}
 
-	public async getRecipeByID(id: string): Promise<RecipeData> {
-		this.logger.info(`Fetching recipe with ID: ${id}`);
+	public async getById(ctx: Context<GetByIdParams, ServiceMeta>): Promise<RecipeData> {
+		const recipeID = ctx.params.recipeID;
+		this.logger.info(`Fetching recipe with ID: ${recipeID}`);
 		try {
-			return  await this.broker.call("v1.data-store.get", { id }) as RecipeData;
+			return  await ctx.call("v1.data-store.get", { id: recipeID }) as RecipeData;
 		} catch (error) {
 			throw new DatabaseError(error.message || "Failed to fetch RecipeData by ID.", error.code || 500, "data-store");
 		}
 	}
 
-	private async getByNameAndRating(name: string, rating: number): Promise<RecipeData[]> {
+	private async getByNameAndRating(name: string, rating: number, ctx: Context<any, any>): Promise<RecipeData[]> {
 		this.logger.debug(`Fetching recipe with Name: ${name} and rating over: ${rating}`);
 		try {
-			const possibleIDs = await this.getPossibleIDsForRating(rating);
-			return  await this.broker.call("v1.data-store.findOverID", { query: { _id: { $in: possibleIDs }, name: { $regex: name, $options: "i" } } }) as RecipeData[];
+			const possibleIDs = await this.getPossibleIDsForRating(rating, ctx);
+			return  await ctx.call("v1.data-store.findOverID", { query: { _id: { $in: possibleIDs }, name: { $regex: name, $options: "i" } } }) as RecipeData[];
 		} catch (error) {
 			if (error instanceof BaseError) {throw error;}
 			else {
@@ -276,11 +209,11 @@ export default class RecipeProviderService extends Service {
 		}
 	}
 
-	private async getByNameAndRatingAndTags(name: string, rating: number, tagNames: string[]): Promise<RecipeData[]> {
+	private async getByNameAndRatingAndTags(name: string, rating: number, tagNames: string[], ctx: Context<any, any>): Promise<RecipeData[]> {
 		this.logger.debug(`Fetching recipe with Name: ${name} and rating over: ${rating} and tags: ${tagNames}`);
 		try {
-			const [tagIDs, possibleIDs] = await Promise.all([this.convertTagsInIDs(tagNames), this.getPossibleIDsForRating(rating)]);
-			return  await this.broker.call("v1.data-store.findOverID", { query: { _id: { $in: possibleIDs }, name: { $regex: name, $options: "i" }, tags: { $all: tagIDs } } }) as RecipeData[];
+			const [tagIDs, possibleIDs] = await Promise.all([this.convertTagsInIDs(tagNames, ctx), this.getPossibleIDsForRating(rating, ctx)]);
+			return  await ctx.call("v1.data-store.findOverID", { query: { _id: { $in: possibleIDs }, name: { $regex: name, $options: "i" }, tags: { $all: tagIDs } } }) as RecipeData[];
 		} catch (error) {
 			if (error instanceof BaseError) {throw error;}
 			else {
@@ -289,11 +222,11 @@ export default class RecipeProviderService extends Service {
 		}
 	}
 
-	private async getByNameAndTags(name: string, tagNames: string[]): Promise<RecipeData[]> {
+	private async getByNameAndTags(name: string, tagNames: string[], ctx: Context<any, any>): Promise<RecipeData[]> {
 		this.logger.debug(`Fetching recipe with Name: ${name} and tags: ${tagNames}`);
 		try {
-			const tagIDs = await this.convertTagsInIDs(tagNames);
-			return  await this.broker.call("v1.data-store.find", { query: { name: { $regex: name, $options: "i" }, tags: { $all: tagIDs } } }) as RecipeData[];
+			const tagIDs = await this.convertTagsInIDs(tagNames, ctx);
+			return  await ctx.call("v1.data-store.find", { query: { name: { $regex: name, $options: "i" }, tags: { $all: tagIDs } } }) as RecipeData[];
 		} catch (error) {
 			if (error instanceof BaseError) {throw error;}
 			else {
@@ -302,11 +235,11 @@ export default class RecipeProviderService extends Service {
 		}
 	}
 
-	private async getByRatingAndTags(rating: number, tagNames: string[]): Promise<RecipeData[]> {
+	private async getByRatingAndTags(rating: number, tagNames: string[], ctx: Context<any, any>): Promise<RecipeData[]> {
 		this.logger.debug(`Fetching recipe with rating over: ${rating} and tags: ${tagNames}`);
 		try {
-			const [tagIDs, possibleIDs] = await Promise.all([this.convertTagsInIDs(tagNames), this.getPossibleIDsForRating(rating)]);
-			return await this.broker.call("v1.data-store.findOverID", { query: { _id: { $in: possibleIDs }, tags: { $all: tagIDs } } }) as RecipeData[];
+			const [tagIDs, possibleIDs] = await Promise.all([this.convertTagsInIDs(tagNames, ctx), this.getPossibleIDsForRating(rating, ctx)]);
+			return await ctx.call("v1.data-store.findOverID", { query: { _id: { $in: possibleIDs }, tags: { $all: tagIDs } } }) as RecipeData[];
 		} catch (error) {
 			if (error instanceof BaseError) {throw error;}
 			else {
@@ -315,21 +248,21 @@ export default class RecipeProviderService extends Service {
 		}
 	}
 
-	private async getPossibleIDsForRating(rating: number): Promise<string[]> {
+	private async getPossibleIDsForRating(rating: number, ctx: Context<any, any>): Promise<string[]> {
 		try {
 			this.logger.debug(`[Provider] Getting possible ids for rating > ${rating}`);
-			return (await this.broker.call("v1.rating.find", { query: { avgRating: { $gte: rating } } }) as RatingData[]).map(e => e.recipeID);
+			return (await ctx.call("v1.rating.find", { query: { avgRating: { $gte: rating } } }) as RatingData[]).map(e => e.recipeID);
 		} catch (error) {
 			throw new DatabaseError(error.message || "Failed to fetch recipe IDs by rating.", error.code || 500, "rating");
 		}
 	}
 
-	private async convertTagsInIDs(tags: string[]): Promise<string[]> {
+	private async convertTagsInIDs(tags: string[], ctx: Context<any, any>): Promise<string[]> {
 		this.logger.debug("Converting tags to their matching ids.", tags);
 		try {
 			const ids = new Array<string>();
 			for (const tag of tags) {
-				ids.push((await this.broker.call("v1.tags.getByString", { name: tag }) as Tag[])[0].id);
+				ids.push((await ctx.call("v1.tags.getByString", { name: tag }) as Tag[])[0].id);
 			}
 			return ids;
 		} catch (error) {
@@ -340,10 +273,10 @@ export default class RecipeProviderService extends Service {
 		}
 	}
 
-	private async getRecipesByTag(tagID: string): Promise<RecipeData[]> {
+	private async getRecipesByTag(tagID: string, ctx: Context<any, any>): Promise<RecipeData[]> {
 		try {
 			this.logger.debug(`Fetching recipes with tag: ${tagID}`);
-			return await this.broker.call("v1.data-store.find", { query: { tags: { $regex: tagID, $options: "i" } } }) as RecipeData[];
+			return await ctx.call("v1.data-store.find", { query: { tags: { $regex: tagID, $options: "i" } } }) as RecipeData[];
 		} catch (error) {
 			throw new FilterError(error.message || "Failed to fetch RecipeData from data-store", error.code || 500, FilterType.TAG);
 		}

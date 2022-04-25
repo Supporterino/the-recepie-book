@@ -58,14 +58,14 @@ export default class PhotoService extends Service {
 		return this.bucket.openDownloadStreamByName(fileName);
 	}
 
-	public deleteImage(name: string) {
+	public deleteImage(name: string): void {
 		this.bucket.find({ filename: name }).toArray().then((data: any[]) => {
 			// eslint-disable-next-line no-underscore-dangle
 			this.bucket.delete(data[0]._id);
 		});
 	}
 
-	public saveImage(ctx: Context<Transform, PhotoUploadMeta>) {
+	public saveImage(ctx: Context<Transform, PhotoUploadMeta>): PromiseLike<string> {
 		return new this.Promise(async (resolve: (value: string) => void, reject: (reason?: any) => void) => {
 
 			const fileName = `${uuidv4()}.${ctx.meta.filename.split(".").pop()}`;
