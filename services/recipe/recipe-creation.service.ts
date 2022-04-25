@@ -14,17 +14,6 @@ export default class RecipeCreationService extends Service {
             version: 1,
 			mixins: [ErrorMixin],
 			actions:{
-				/**
-				 * Validates the input and converts the tags to ids and sends a creation request to the `data-store` service
-				 *
-				 * @method
-				 * @param {String} name - The name of the recipe
-				 * @param {String} description - The description for the recipe
-				 * @param {Array<string>} steps - The steps to make the recipe. Each step should be one element of the array
-				 * @param {Array<Ingredient>} ingredients - A list of ingredients needed to make the recipe
-				 * @param {Array<string} tags - A list of tag names to link to the recipe
-				 * @param {String} owner - Name of the recipe owner
-				 */
 				createRecipe: {
 					rest: {
 						method: "POST",
@@ -37,20 +26,20 @@ export default class RecipeCreationService extends Service {
 						steps: {type: "array", items: "string"},
 						tags: {type: "array", items: "string"},
 					},
-					handler: async (ctx: Context<CreationData, ServiceMeta>): Promise<CreationResponse> => await this.createRecipe(ctx.params, ctx.meta.user.id),
+					handler: async (ctx: Context<CreationData, ServiceMeta>): Promise<CreationResponse> => await this.createRecipe(ctx),
 				},
 			},
 		});
 	}
 
-	public async createRecipe(params: CreationData, userID: string): Promise<CreationResponse> {
-		const now = new Date();
-		const recipeData = this.creationDataToRecipeData(params, now, userID);
+	public async createRecipe(ctx: Context<CreationData, ServiceMeta>): Promise<CreationResponse> {
+		const [ rawRecipe, userID, now ] = [ ctx.params, ctx.meta.user.id, new Date() ];
+		const recipeData = this.creationDataToRecipeData(rawRecipe, now, userID);
 
 		try {
-			recipeData.tags = await this.broker.call("v1.id-converter.convertTagsToID", { tagNames: recipeData.tags });
+			recipeData.tags = await ctx.call("v1.id-converter.convertTagsToID", { tagNames: recipeData.tags });
 			this.logger.info(`Creating recipe (${recipeData.name}) by ${recipeData.owner}`);
-			const recipe = await this.broker.call("v1.data-store.create", recipeData) as RecipeData;
+			const recipe = await ctx.call("v1.data-store.create", recipeData) as RecipeData;
 			return {
 				recipeID: `${recipe.id}`,
 				msg: `Saved recipe (${recipe.name}) by ${recipe.owner}`,

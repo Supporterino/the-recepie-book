@@ -33,14 +33,6 @@ export default class RatingService extends Service {
 				},
 			},
 			actions: {
-				/**
-				 * Add a new rating to a recipe.
-				 *
-				 * @method
-				 * @param {String} recipeID - The recipe id to add a new rating
-				 * @param {Number} rating - The value of the new rating
-				 * @returns {RatingResponse}
-				 */
 				addRating: {
 					rest: {
 						path: "/addRating",
@@ -50,18 +42,8 @@ export default class RatingService extends Service {
 						recipeID: "string",
 						rating: "number",
 					},
-					async handler(ctx: Context<AddRatingParams, ServiceMeta>): Promise<RatingResponse> {
-						return await this.addRating(ctx.meta.user.id, ctx.params.recipeID, ctx.params.rating);
-					},
+					handler: async (ctx: Context<AddRatingParams, ServiceMeta>): Promise<RatingResponse> => await this.addRating(ctx),
 				},
-				/**
-				 * Update a rating of a recipe.
-				 *
-				 * @method
-				 * @param {String} recipeID - The recipe id to modify the rating of
-				 * @param {Number} rating - The updated rating value
-				 * @returns {RatingResponse}
-				 */
 				updateRating: {
 					rest: {
 						path: "/updateRating",
@@ -71,17 +53,8 @@ export default class RatingService extends Service {
 						recipeID: "string",
 						rating: "number",
 					},
-					async handler(ctx: Context<UpdateRatingParams, ServiceMeta>): Promise<RatingResponse> {
-						return await this.updateRating(ctx.meta.user.id, ctx.params.recipeID, ctx.params.rating);
-					},
+					handler: async (ctx: Context<UpdateRatingParams, ServiceMeta>): Promise<RatingResponse> => await this.updateRating(ctx),
 				},
-				/**
-				 * Remove a rating from a recipe.
-				 *
-				 * @method
-				 * @param {String} recipeID - The recipe id to remove the rating from
-				 * @returns {RatingResponse}
-				 */
 				removeRating: {
 					rest: {
 						path: "/removeRating",
@@ -90,17 +63,8 @@ export default class RatingService extends Service {
 					params: {
 						recipeID: "string",
 					},
-					async handler(ctx: Context<RemoveRatingParams, ServiceMeta>): Promise<RatingResponse> {
-						return await this.removeRating(ctx.meta.user.id, ctx.params.recipeID);
-					},
+					handler: async (ctx: Context<RemoveRatingParams, ServiceMeta>): Promise<RatingResponse> => await this.removeRating(ctx),
 				},
-				/**
-				 * Get the rating of a user from a specific recipe.
-				 *
-				 * @method
-				 * @param {String} recipeID
-				 * @returns {Number}
-				 */
 				getRatingForUser: {
 					rest: {
 						path: "/getRatingForUser",
@@ -109,41 +73,38 @@ export default class RatingService extends Service {
 					params: {
 						recipeID: "string",
 					},
-					async handler(ctx: Context<GetRatingForUserParams, ServiceMeta>): Promise<number> {
-						return await this.getRatingForUser(ctx.meta.user.id, ctx.params.recipeID);
-					},
+					handler: async (ctx: Context<GetRatingForUserParams, ServiceMeta>): Promise<number> => await this.getRatingForUser(ctx),
 				},
 			},
 			events: {
-				/**
-				 * Event to handle the deletion of {@link RatingData} when a recipe is deleted.
-				 *
-				 * @event
-				 */
 				"recipe.deletion": {
 					params: {
 						recipeID: "string",
 					},
-					handler: async (ctx: Context<RecipeDeletionParams>) => {
-						const id = (await this.getByRecipeID(ctx.params.recipeID) as RatingData).id;
-						ctx.call("v1.rating.remove", { id });
-					},
+					handler: async (ctx: Context<RecipeDeletionParams>): Promise<void> => this["recipe.deletion"](ctx),
 				},
 			},
 		}, schema));
 	}
 
-	public async getRatingForUser(userID: string, recipeID: string): Promise<number> {
+	public async "recipe.deletion"(ctx: Context<RecipeDeletionParams>): Promise<void> {
+		const id = (await this.getByRecipeID(ctx.params.recipeID, ctx) as RatingData).id;
+		ctx.call("v1.rating.remove", { id });
+	}
+
+	public async getRatingForUser(ctx: Context<GetRatingForUserParams, ServiceMeta>): Promise<number> {
+		const [ recipeID, userID ] = [ ctx.params.recipeID, ctx.meta.user.id ];
 		if (!userID) {throw new AuthError("Unauthorized! No user logged in.", 401);}
-		const recipeRating = await this.getByRecipeID(recipeID);
+		const recipeRating = await this.getByRecipeID(recipeID, ctx);
 		if (!recipeRating) {return 0;}
 		const userRating = recipeRating.ratings.find(rating => rating.userID === userID);
 		if (!userRating) {return 0;}
 		return userRating.rating;
 	}
 
-	public async removeRating(userID: string, recipeID: string): Promise<RatingResponse> {
-		const recipeRating = await this.getByRecipeID(recipeID);
+	public async removeRating(ctx: Context<RemoveRatingParams, ServiceMeta>): Promise<RatingResponse> {
+		const [ recipeID, userID ] = [ ctx.params.recipeID, ctx.meta.user.id ];
+		const recipeRating = await this.getByRecipeID(recipeID, ctx);
 		if (!recipeRating) {
 			this.logger.warn(`Recipe[${recipeID}] has no ratings.`);
 			return { success: false, method: RatingOperations.REMOVE, recipeID, userID, msg: "The recipe has no ratings yet" } as RatingResponse;
@@ -159,19 +120,20 @@ export default class RatingService extends Service {
 		recipeRating.ratings.splice(index, 1);
 		const newRecipeRating = this.calculateAvgRating(recipeRating);
 		try {
-			await this.broker.call("v1.rating.update", newRecipeRating);
+			await ctx.call("v1.rating.update", newRecipeRating);
 			return { success: true, method: RatingOperations.REMOVE, recipeID, userID, msg: "Removed users rating from recipe" } as RatingResponse;
 		} catch (error) {
 			throw new DatabaseError(error.message || "Failed to update RatingData.", error.code || 500, this.name);
 		}
 	}
 
-	public async addRating(userID: string, recipeID: string, rating: number): Promise<RatingResponse> {
+	public async addRating(ctx: Context<AddRatingParams, ServiceMeta>): Promise<RatingResponse> {
+		const [ recipeID, userID, rating ] = [ ctx.params.recipeID, ctx.meta.user.id, ctx.params.rating ];
 		let recipeRating: RatingData = null;
-		const existingRating = await this.getByRecipeID(recipeID);
+		const existingRating = await this.getByRecipeID(recipeID, ctx);
 		if (existingRating) {recipeRating = existingRating;}
 		else {
-			recipeRating = await this.createNewEntry(recipeID);
+			recipeRating = await this.createNewEntry(recipeID, ctx);
 		}
 
 		const index = this.getIndexOfRating(recipeRating, userID);
@@ -179,20 +141,21 @@ export default class RatingService extends Service {
 			if (recipeRating.ratings[index].rating === rating) {return { success: false, method: RatingOperations.ADD, recipeID, userID, msg: "This rating is already present" } as RatingResponse;}
 
 			this.logger.warn(`Recipe[${recipeID}] Rating add was called but user already rated. Triggering update`, recipeID, userID, rating);
-			return await this.internalUpdateRating(recipeRating, index, rating, recipeID, userID);
+			return await this.internalUpdateRating(recipeRating, index, rating, recipeID, userID, ctx);
 		}
 
 		const updatedRecipeRating = this.internalAddRating(recipeRating, userID, rating);
 		try {
-			await this.broker.call("v1.rating.update", updatedRecipeRating);
+			await ctx.call("v1.rating.update", updatedRecipeRating);
 			return { success: true, method: RatingOperations.ADD, recipeID, userID, msg: "User rated recipe" } as RatingResponse;
 		} catch (error) {
 			throw new DatabaseError(error.message || "Failed to update RatingData.", error.code || 500, this.name);
 		}
 	}
 
-	public async updateRating(userID: string, recipeID: string, rating: number): Promise<RatingResponse> {
-		const recipeRating = await this.getByRecipeID(recipeID);
+	public async updateRating(ctx: Context<UpdateRatingParams, ServiceMeta>): Promise<RatingResponse> {
+		const [ recipeID, userID, rating ] = [ ctx.params.recipeID, ctx.meta.user.id, ctx.params.rating ];
+		const recipeRating = await this.getByRecipeID(recipeID, ctx);
 		if (!recipeRating) {
 			this.logger.warn(`Recipe[${recipeID}] Has no rating yet.`);
 			return { success: false, method: RatingOperations.UPDATE, recipeID, userID, msg: "The recipe has no ratings yet" } as RatingResponse;
@@ -204,25 +167,25 @@ export default class RatingService extends Service {
 			return { success: false, method: RatingOperations.UPDATE, recipeID, userID, msg: `The user(${userID}) hasn't rated recipe so updating is not possible` } as RatingResponse;
 		}
 
-		return await this.internalUpdateRating(recipeRating, index, rating, recipeID, userID);
+		return await this.internalUpdateRating(recipeRating, index, rating, recipeID, userID, ctx);
 	}
 
-	private async internalUpdateRating(data: RatingData, index: number, rating: number, recipeID: string, userID: string): Promise<RatingResponse> {
+	private async internalUpdateRating(data: RatingData, index: number, rating: number, recipeID: string, userID: string, ctx: Context<any, any>): Promise<RatingResponse> {
 		this.logger.info(`Recipe[${recipeID}] Updating rating for user (${userID})`);
 		const updatedRating = this.replaceRating(data, index, rating);
 		try {
-			await this.broker.call("v1.rating.update", updatedRating);
+			await ctx.call("v1.rating.update", updatedRating);
 			return { success: true, method: RatingOperations.UPDATE, recipeID, userID, msg: `Updated recipe new avgRating of: ${updatedRating.avgRating}` } as RatingResponse;
 		} catch (error) {
 			throw new DatabaseError(error.message || "Failed to update RatingData.", error.code || 500, this.name);
 		}
 	}
 
-	private async createNewEntry(recipeID: string): Promise<RatingData> {
+	private async createNewEntry(recipeID: string, ctx: Context<any, any>): Promise<RatingData> {
 		this.logger.info(`Recipe[${recipeID}] Creating RatingData`);
 		try {
-			const data = await this.broker.call("v1.rating.create", { recipeID, ratings: new Array<RatingEntry>(), avgRating: null }) as RatingData;
-			this.broker.emit("recipe.first_rating", { recipeID, ratingID: data.id });
+			const data = await ctx.call("v1.rating.create", { recipeID, ratings: new Array<RatingEntry>(), avgRating: null }) as RatingData;
+			ctx.emit("recipe.first_rating", { recipeID, ratingID: data.id });
 			return data;
 		} catch (error) {
 			throw new DatabaseError(error.message || "Failed to create new RatingData.", error.code || 500, this.name);
@@ -251,10 +214,10 @@ export default class RatingService extends Service {
 		return data;
 	}
 
-	private async getByRecipeID(recipeID: string): Promise<RatingData | null> {
+	private async getByRecipeID(recipeID: string, ctx: Context<any, any>): Promise<RatingData | null> {
 		this.logger.info(`Trying to load RatingData for recipeID: ${recipeID}`);
 		try {
-			const possibleRating = (await this.broker.call("v1.rating.find", { query: { recipeID }}) as RatingData[])[0];
+			const possibleRating = (await ctx.call("v1.rating.find", { query: { recipeID }}) as RatingData[])[0];
 			if (possibleRating) {return possibleRating;}
 			else {return null;}
 		} catch (error) {

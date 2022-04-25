@@ -39,31 +39,13 @@ export default class UserService extends Service {
 				},
 			},
 			actions: {
-				/**
-				 * Check if a given pair of userid and email match the entry in the database
-				 *
-				 * @method
-				 * @param {String} id - The user id
-				 * @param {String} email
-				 * @returns {Boolean}
-				 */
 				isLegitUser: {
 					params: {
 						userID: "string",
 						email: { type: "email" },
 					},
-					async handler(ctx: Context<IsLegitUserParams>): Promise<boolean> {
-						return await this.checkAuthentic(ctx.params.userID, ctx.params.email);
-					},
+					handler: async (ctx: Context<IsLegitUserParams>): Promise<boolean> => await this.isLegitUser(ctx),
 				},
-				/**
-				 * Checks if the userID matches the owner of the recipe
-				 *
-				 * @method
-				 * @param {String} userID
-				 * @param {String} recipeID
-				 * @returns {boolean}
-				 */
 				ownsRecipe: {
 					rest: {
 						method: "POST",
@@ -72,9 +54,7 @@ export default class UserService extends Service {
 					params: {
 						recipeID: "string",
 					},
-					async handler(ctx: Context<OwnsRecipeParams, ServiceMeta>): Promise<boolean> {
-						return await this.checkAuthor(ctx.meta.user.id, ctx.params.recipeID);
-					},
+					handler: async (ctx: Context<OwnsRecipeParams, ServiceMeta>): Promise<boolean> => await this.ownsRecipe(ctx),
 				},
 				getSanitizedUser: {
 					rest: {
@@ -84,9 +64,7 @@ export default class UserService extends Service {
 					params: {
 						userID: "string",
 					},
-					async handler(ctx: Context<GetSanitizedUserParams, ServiceMeta>): Promise<User> {
-						return await this.getSanitizedUser(ctx.params.userID);
-					},
+					handler: async (ctx: Context<GetSanitizedUserParams, ServiceMeta>): Promise<User> => await this.getSanitizedUser(ctx),
 				},
 				changeUsername: {
 					rest: {
@@ -96,7 +74,7 @@ export default class UserService extends Service {
 					params: {
 						username: "string",
 					},
-					handler: async (ctx: Context<ChangeUsernameParams, ServiceMeta>): Promise<boolean> => await this.changeUsername(ctx.params.username, ctx.meta.user.id),
+					handler: async (ctx: Context<ChangeUsernameParams, ServiceMeta>): Promise<boolean> => await this.changeUsername(ctx),
 				},
 			},
 			events: {
@@ -105,20 +83,23 @@ export default class UserService extends Service {
 						userID: "string",
 						imageName: "string",
 					},
-					handler: async (ctx: Context<UserAvatarUpdateParams>) => {
-						const oldFile = (await ctx.call("v1.user.get", {id: ctx.params.userID}) as UserData).avatar;
-						await ctx.call("v1.user.update", { id: ctx.params.userID, avatar: ctx.params.imageName });
-						if (oldFile !== "NO_PIC") {ctx.emit("photo.delete", { fileName: oldFile });}
-					},
+					handler: async (ctx: Context<UserAvatarUpdateParams>) => this["user.newAvatar"](ctx),
 				},
 			},
 		}, schema));
 	}
 
-	public async changeUsername(username: string, userID: string): Promise<boolean> {
+	public async "user.newAvatar"(ctx: Context<UserAvatarUpdateParams>): Promise<void> {
+		const oldFile = (await ctx.call("v1.user.get", {id: ctx.params.userID}) as UserData).avatar;
+		await ctx.call("v1.user.update", { id: ctx.params.userID, avatar: ctx.params.imageName });
+		if (oldFile !== "NO_PIC") {ctx.emit("photo.delete", { fileName: oldFile });}
+	}
+
+	public async changeUsername(ctx: Context<ChangeUsernameParams, ServiceMeta>): Promise<boolean> {
+		const [ userID, username ] = [ ctx.meta.user.id, ctx.params.username ];
 		this.logger.info(`User[${userID}] Changing username to ${username}`);
 		try {
-			const updatedUser = await this.broker.call("v1.user.update", { id: userID, username}) as UserData;
+			const updatedUser = await ctx.call("v1.user.update", { id: userID, username}) as UserData;
 			if (updatedUser.username !== username) {return false;}
 			return true;
 		} catch (error) {
@@ -126,20 +107,22 @@ export default class UserService extends Service {
 		}
 	}
 
-	public async getSanitizedUser(userID: string): Promise<User> {
-		const user = await this.broker.call("v1.user.get", { id: userID }) as UserData;
+	public async getSanitizedUser(ctx: Context<GetSanitizedUserParams, ServiceMeta>): Promise<User> {
+		const userID = ctx.params.userID;
+		const user = await ctx.call("v1.user.get", { id: userID }) as UserData;
 		return {
 			id: user.id,
 			username: user.username,
 			joinedAt: user.joinedAt,
-			avatar: (user.avatar !== "NO_PIC") ? await this.broker.call("v1.photo.getImageUrl", { filename: user.avatar }) : "",
+			avatar: (user.avatar !== "NO_PIC") ? await ctx.call("v1.photo.getImageUrl", { filename: user.avatar }) : "",
 			role: user.role,
 		} as User;
 	}
 
-	public async checkAuthentic(id: string, email: string): Promise<boolean> {
+	public async isLegitUser(ctx: Context<IsLegitUserParams>): Promise<boolean> {
+		const [ userID, email ] = [ ctx.params.userID, ctx.params.email ];
 		try {
-			const user = await this.broker.call("v1.user.get", { id }) as UserData;
+			const user = await ctx.call("v1.user.get", { id: userID }) as UserData;
 			if (user && user.email === email) {return true;}
 			else {return false;}
 		} catch (error) {
@@ -147,8 +130,9 @@ export default class UserService extends Service {
 		}
 	}
 
-	public async checkAuthor(userID: string, recipeID: string): Promise<boolean> {
-		if (userID === (await this.broker.call("v1.data-store.get", { id: recipeID }) as RecipeData).owner) {return true;}
+	public async ownsRecipe(ctx: Context<OwnsRecipeParams, ServiceMeta>): Promise<boolean> {
+		const [ userID, recipeID ] = [ ctx.meta.user.id, ctx.params.recipeID ];
+		if (userID === (await ctx.call("v1.data-store.get", { id: recipeID }) as RecipeData).owner) {return true;}
 		else {return false;}
 	}
 }

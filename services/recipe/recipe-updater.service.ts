@@ -1,6 +1,6 @@
 "use strict";
 
-import { CallingOptions, Context, Service, ServiceBroker} from "moleculer";
+import { Context, Service, ServiceBroker} from "moleculer";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
 import { AuthError, BaseError, RecipeData, ServiceMeta } from "../../shared";
 import { UpdateResponse, Units, UpdateData } from "../../types";
@@ -13,17 +13,6 @@ export default class RecipeUpdaterService extends Service {
             version: 1,
 			mixins: [ErrorMixin],
 			actions:{
-				/**
-				 * Update fields of a recipe
-				 *
-				 * @method
-				 * @param {Number} id
-				 * @param {String} description - optional
-				 * @param {Array<Ingredient>} ingredients - optionak
-				 * @param {Array<String>} steps - optional
-				 * @param {Array<String>} tags - optional
-				 * @returns {UpdateResponse}
-				 */
 				updateRecipe: {
 					rest: {
 						path: "/updateRecipe",
@@ -37,23 +26,22 @@ export default class RecipeUpdaterService extends Service {
 						steps: {type: "array", items: "string", optional: true},
 						tags: {type: "array", items: "string", optional: true},
 					},
-					async handler(ctx: Context<UpdateData, ServiceMeta>): Promise<UpdateResponse> {
-						return await this.updateRecipe(ctx.params, ctx.meta.user.id);
-					},
+					handler: async (ctx: Context<UpdateData, ServiceMeta>): Promise<UpdateResponse> => await this.updateRecipe(ctx),
 				},
 			},
 		});
 	}
 
-	public async updateRecipe(updatedRecipe: UpdateData, userID: string): Promise<UpdateResponse> {
-		if (!(await this.broker.call("v1.user.ownsRecipe", { recipeID: updatedRecipe.id }, { meta: { user: { id: userID}}}) as boolean)) {throw new AuthError("User doesn't own this recipe.", 403);}
+	public async updateRecipe(ctx: Context<UpdateData, ServiceMeta>): Promise<UpdateResponse> {
+		const [ updatedRecipe, userID ] = [ ctx.params, ctx.meta.user.id ];
+		if (!(await ctx.call("v1.user.ownsRecipe", { recipeID: updatedRecipe.id }, { meta: { user: { id: userID}}}) as boolean)) {throw new AuthError("User doesn't own this recipe.", 403);}
 
 		const updateData: UpdateData = { ...updatedRecipe };
 
 		try {
-			if (updateData.tags) {updateData.tags = await this.broker.call("v1.id-converter.convertTagsToID", { tagNames: updateData.tags });}
+			if (updateData.tags) {updateData.tags = await ctx.call("v1.id-converter.convertTagsToID", { tagNames: updateData.tags });}
 			(updateData as RecipeData).updateTimestamp = new Date();
-			const recipe = await this.broker.call("v1.data-store.update", (updateData as RecipeData)) as RecipeData;
+			const recipe = await ctx.call("v1.data-store.update", (updateData as RecipeData)) as RecipeData;
 			return {
 				recipeID: `${recipe.id}`,
 				msg: `Recipe (${recipe.name}) succesfully updated`,

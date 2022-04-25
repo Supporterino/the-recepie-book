@@ -13,13 +13,6 @@ export default class IDConverterService extends Service {
             version: 1,
 			mixins: [ErrorMixin],
 			actions:{
-				/**
-				 * Converts a recipe from the internal data foramt with ids to the sendable object with all datas by resolving the ids.
-				 *
-				 * @method
-				 * @param {RecipeData} recipe - The recipe to process
-				 * @returns {Recipe}
-				 */
 				convertRecipe: {
 					params: {
 						recipe: { type: "object", props: {
@@ -35,17 +28,8 @@ export default class IDConverterService extends Service {
 							updateTimestamp: { type: "date", convert: true },
 						} },
 					},
-					async handler(ctx: Context<ConvertRecipeParams, ServiceMeta>): Promise<Recipe> {
-						return await this.convertRecipe(ctx.params.recipe, ctx.meta.user?.id);
-					},
+					handler: async (ctx: Context<ConvertRecipeParams, ServiceMeta>): Promise<Recipe> => await this.convertRecipe(ctx),
 				},
-				/**
-				 * Convert an array of recipes by converting one by one.
-				 *
-				 * @method
-				 * @param {Array<RecipeData>} recipes
-				 * @returns {Array<Recipe>}
-				 */
 				convertRecipes: {
 					params: {
 						recipes: { type: "array", items: {type: "object", props: {
@@ -61,66 +45,38 @@ export default class IDConverterService extends Service {
 							updateTimestamp: { type: "date", convert: true },
 						}} },
 					},
-					async handler(ctx: Context<ConvertRecipesParams, ServiceMeta>): Promise<Recipe> {
-						return await this.convertRecipes(ctx.params.recipes, ctx.meta);
-					},
+					handler: async (ctx: Context<ConvertRecipesParams, ServiceMeta>): Promise<Recipe[]> => await this.convertRecipes(ctx),
 				},
-				/**
-				 * Converts the tags of a recipe to their ids via the tags service
-				 *
-				 * @method
-				 * @param {Array<string>} tagNames - The tag names to convert
-				 * @param {Array<string>}
-				 */
 				convertTagsToID: {
 					params: {
 						tagNames: { type: "array", items: "string" },
 					},
-					async handler(ctx: Context<ConvertTagsToIDParams>): Promise<string[]> {
-						return await this.parseTagsToID(ctx.params.tagNames);
-					},
+					handler: async (ctx: Context<ConvertTagsToIDParams>): Promise<string[]> => await this.convertTagsToID(ctx),
 				},
-				/**
-				 * Converts the tag ids of a recipe to their name via the tags service
-				 *
-				 * @method
-				 * @param {Array<string>} tagIDs - The tag ids to convert
-				 * @param {Array<string>}
-				 */
 				convertTagsToName: {
 					params: {
  						tagIDs: { type: "array", items: "string" },
 					},
-					async handler(ctx: Context<ConvertTagsToNameParams>): Promise<string[]> {
-						return await this.parseTagsToName(ctx.params.tagIDs);
-					},
+					handler: async (ctx: Context<ConvertTagsToNameParams>): Promise<string[]> => await this.convertTagsToName(ctx),
 				},
-				/**
-				 * Convert a rating id to the avg rating for this id
-				 *
-				 * @method
-				 * @param {String} ratingID
-				 * @returns {number}
-				 */
 				convertRatingIDtoRating: {
 					params: {
 						ratingID: "string",
 					},
-					async handler(ctx: Context<ConvertRatingIDtoRatingParams>): Promise<number> {
-						return await this.getRatingForRatingID(ctx.params.ratingID);
-					},
+					handler: async (ctx: Context<ConvertRatingIDtoRatingParams>): Promise<RatingInfo> => await this.convertRatingIDtoRating(ctx),
 				},
 			},
 		});
 	}
 
-	public async parseTagsToID(tagNames: string[]): Promise<string[]> {
+	public async convertTagsToID(ctx: Context<ConvertTagsToIDParams>): Promise<string[]> {
+		const tagNames = ctx.params.tagNames;
 		this.logger.info("[Converter] Parse tags to id.", tagNames);
 		try {
 			const output: string[] = [];
 			for (const tagName of tagNames) {
 				this.logger.debug(`Converting tag (${tagName}) to id`);
-				output.push(await this.broker.call("v1.tags.checkForTag", {name: tagName}));
+				output.push(await ctx.call("v1.tags.checkForTag", {name: tagName}));
 			}
 			return output;
 		} catch (error) {
@@ -131,13 +87,14 @@ export default class IDConverterService extends Service {
 		}
 	}
 
-	public async parseTagsToName(tagIDs: string[]): Promise<string[]> {
+	public async convertTagsToName(ctx: Context<ConvertTagsToNameParams>): Promise<string[]> {
+		const tagIDs = ctx.params.tagIDs;
 		this.logger.info("[Converter] Parse tag ids into name.", tagIDs);
 		try {
 			const output: string[] = [];
 			for (const tagID of tagIDs) {
 				this.logger.debug(`Getting tag (${tagID})`);
-				output.push((await this.broker.call("v1.tags.get", { id: tagID }) as Tag).name);
+				output.push((await ctx.call("v1.tags.get", { id: tagID }) as Tag).name);
 			}
 			return output;
 		} catch (error) {
@@ -145,12 +102,13 @@ export default class IDConverterService extends Service {
 		}
 	}
 
-	public async getRatingForRatingID(ratingID: string): Promise<RatingInfo> {
+	public async convertRatingIDtoRating(ctx: Context<ConvertRatingIDtoRatingParams>): Promise<RatingInfo> {
+		const ratingID = ctx.params.ratingID;
 		this.logger.info(`[Converter] Getting avg rating for rating id: ${ratingID}`);
  		if (ratingID === "") {return { avgRating: 0, numOfRatings: 0} as RatingInfo;}
 		else {
 			try {
-				const ratingPayload = await this.broker.call("v1.rating.get", { id: ratingID }) as RatingData;
+				const ratingPayload = await ctx.call("v1.rating.get", { id: ratingID }) as RatingData;
 				return { avgRating: ratingPayload.avgRating, numOfRatings: ratingPayload.ratings.length } as RatingInfo;
 			} catch (error) {
 				throw new DatabaseError(error.message || "Failed to load RatingData by ID.", error.code || 500, "rating");
@@ -158,19 +116,21 @@ export default class IDConverterService extends Service {
 		}
 	}
 
-	public async convertRecipes(recipes: RecipeData[], meta: ServiceMeta): Promise<Recipe[]> {
-		const out = new Array<Recipe>();
+	public async convertRecipes(ctx: Context<ConvertRecipesParams, ServiceMeta>): Promise<Recipe[]> {
+		const recipes = ctx.params.recipes;
+		const promises = new Array<Promise<Recipe>>();
         for (const recipe of recipes) {
-            out.push(await this.broker.call("v1.id-converter.convertRecipe", {recipe}, { meta }));
+            promises.push(ctx.call("v1.id-converter.convertRecipe", { recipe }) as Promise<Recipe>);
         }
-        return out;
+		return Promise.all(promises).then(recepies => recepies);
     }
 
-    public async convertRecipe(recipe: RecipeData, userID: string = null): Promise<Recipe> {
+    public async convertRecipe(ctx: Context<ConvertRecipeParams, ServiceMeta>): Promise<Recipe> {
+		const [ recipe, userID ] = [ ctx.params.recipe, ctx.meta.user?.id ];
 		this.logger.info(`[Converter] Converting recipe: ${recipe.id}`);
 		try {
-			if (userID) {this.broker.emit("user.recentAdd", { userID, recipeID: recipe.id });}
-			const [ tags, user, rating, isFavorite, myRating, isCookList, picture ] = await Promise.all([this.getTagPromise(recipe.tags), this.getOwnerPromise(recipe.owner), this.getRatingPromise(recipe.rating as string), this.getFavoritePromise(recipe.id, userID), this.getMyRatingPromise(recipe.id, userID), this.getCookListPromise(recipe.id, userID), this.getImageUrlPromise(recipe.picture)]);
+			if (userID) {ctx.emit("user.recentAdd", { userID, recipeID: recipe.id });}
+			const [ tags, user, rating, isFavorite, myRating, isCookList, picture ] = await Promise.all([this.getTagPromise(recipe.tags, ctx), this.getOwnerPromise(recipe.owner, ctx), this.getRatingPromise(recipe.rating as string, ctx), this.getFavoritePromise(recipe.id, userID, ctx), this.getMyRatingPromise(recipe.id, userID, ctx), this.getCookListPromise(recipe.id, userID, ctx), this.getImageUrlPromise(recipe.picture, ctx)]);
 			const out = {
 				id: recipe.id,
 				name: recipe.name,
@@ -193,35 +153,35 @@ export default class IDConverterService extends Service {
 		}
     }
 
-	private getTagPromise(tagIDs: string[]): Promise<string[]> {
-		return this.broker.call("v1.id-converter.convertTagsToName", { tagIDs });
+	private getTagPromise(tagIDs: string[], ctx: Context<any, any>): Promise<string[]> {
+		return ctx.call("v1.id-converter.convertTagsToName", { tagIDs });
 	}
 
-	private getOwnerPromise(userID: string): Promise<User> {
-		return this.broker.call("v1.user.getSanitizedUser", { userID });
+	private getOwnerPromise(userID: string, ctx: Context<any, any>): Promise<User> {
+		return ctx.call("v1.user.getSanitizedUser", { userID });
 	}
 
-	private getRatingPromise(ratingID: string): Promise<RatingInfo> {
-		return this.broker.call("v1.id-converter.convertRatingIDtoRating", { ratingID });
+	private getRatingPromise(ratingID: string, ctx: Context<any, any>): Promise<RatingInfo> {
+		return ctx.call("v1.id-converter.convertRatingIDtoRating", { ratingID });
 	}
 
-	private getFavoritePromise(recipeID: string, userID: string): Promise<boolean> {
-		if (userID) {return this.broker.call("v1.favorite.isFavorite", {recipeID }, { meta: { user: { id: userID }}});}
+	private getFavoritePromise(recipeID: string, userID: string, ctx: Context<any, any>): Promise<boolean> {
+		if (userID) {return ctx.call("v1.favorite.isFavorite", {recipeID }, { meta: { user: { id: userID }}});}
 		else {return new Promise((resolve, reject) => {resolve(false);});}
 	}
 
-	private getCookListPromise(recipeID: string, userID: string): Promise<boolean> {
-		if (userID) {return this.broker.call("v1.cooklist.isOnCookList", {recipeID }, { meta: { user: { id: userID }}});}
+	private getCookListPromise(recipeID: string, userID: string, ctx: Context<any, any>): Promise<boolean> {
+		if (userID) {return ctx.call("v1.cooklist.isOnCookList", {recipeID }, { meta: { user: { id: userID }}});}
 		else {return new Promise((resolve, reject) => {resolve(false);});}
 	}
 
-	private getMyRatingPromise(recipeID: string, userID: string): Promise<number> {
-		if (userID) {return this.broker.call("v1.rating.getRatingForUser", {recipeID }, { meta: { user: { id: userID }}});}
+	private getMyRatingPromise(recipeID: string, userID: string, ctx: Context<any, any>): Promise<number> {
+		if (userID) {return ctx.call("v1.rating.getRatingForUser", {recipeID }, { meta: { user: { id: userID }}});}
 		else {return new Promise((resolve, reject) => {resolve(0);});}
 	}
 
-	private getImageUrlPromise(imageName: string): Promise<string> {
+	private getImageUrlPromise(imageName: string, ctx: Context<any, any>): Promise<string> {
 		if (imageName === "NO_PIC") {return new Promise((resolve, reject) => {resolve("");});}
-		return this.broker.call("v1.photo.getImageUrl", { filename: imageName });
+		return ctx.call("v1.photo.getImageUrl", { filename: imageName });
 	}
 }

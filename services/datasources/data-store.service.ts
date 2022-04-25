@@ -51,30 +51,36 @@ export default class DataStoreService extends Service {
 						recipeID: "string",
 						ratingID: "string",
 					},
-					handler: (ctx: Context<FirstRatingParams>) => {
-						ctx.call("v1.data-store.update", { id: ctx.params.recipeID, rating: ctx.params.ratingID });
-					},
+					handler: (ctx: Context<FirstRatingParams>): void => this["recipe.first_rating"](ctx),
 				},
 				"recipe.deletion": {
 					params: {
 						recipeID: "string",
 					},
-					handler: (ctx: Context<RecipeDeletionParams>) => {
-						ctx.call("v1.data-store.remove", { id: ctx.params.recipeID });
-					},
+					handler: (ctx: Context<RecipeDeletionParams>): void => this["recipe.deletion"](ctx),
 				},
 				"recipe.newPicutre": {
 					params: {
 						recipeID: "string",
 						imageName: "string",
 					},
-					handler: async (ctx: Context<RecipePictureUpdateParams>) => {
-						const oldFile = (await ctx.call("v1.data-store.get", { id: ctx.params.recipeID }) as RecipeData).picture;
-						await ctx.call("v1.data-store.update", { id: ctx.params.recipeID, picture: ctx.params.imageName });
-						if (oldFile !== "NO_PIC") {ctx.emit("photo.delete", { fileName: oldFile });}
-					},
+					handler: (ctx: Context<RecipePictureUpdateParams>): Promise<void> => this["recipe.newPicutre"](ctx),
 				},
 			},
 		}, schema));
+	}
+
+	public "recipe.first_rating"(ctx: Context<FirstRatingParams>): void {
+		ctx.call("v1.data-store.update", { id: ctx.params.recipeID, rating: ctx.params.ratingID });
+	}
+
+	public "recipe.deletion"(ctx: Context<RecipeDeletionParams>): void {
+		ctx.call("v1.data-store.remove", { id: ctx.params.recipeID });
+	}
+
+	public async "recipe.newPicutre"(ctx: Context<RecipePictureUpdateParams>): Promise<void> {
+		const oldFile = (await ctx.call("v1.data-store.get", { id: ctx.params.recipeID }) as RecipeData).picture;
+		await ctx.call("v1.data-store.update", { id: ctx.params.recipeID, picture: ctx.params.imageName });
+		if (oldFile !== "NO_PIC") {ctx.emit("photo.delete", { fileName: oldFile });}
 	}
 }
