@@ -1,11 +1,10 @@
 import { Context, Service, ServiceBroker, ServiceSchema } from "moleculer";
 import {
-	AddRatingParams,
-	GetRatingForUserParams,
-	RecipeDeletionParams,
-	RemoveRatingParams,
-	ServiceMeta,
-	UpdateRatingParams,
+	AddRating,
+	GetRatingForUser,
+	RecipeDeletion,
+	RemoveRating,
+	ServiceMeta, UpdateRating,
 } from "../../shared";
 import { RatingResponse } from "../../types";
 
@@ -17,7 +16,7 @@ declare class RatingService extends Service {
 	 *
 	 * @event
 	 */
-	public "recipe.deletion"(ctx: Context<RecipeDeletionParams>): Promise<void>;
+	public "recipe.deletion"(ctx: Context<RecipeDeletion>): Promise<void>;
 
 	/**
 	 * Get the rating of a user from a specific recipe.
@@ -27,7 +26,7 @@ declare class RatingService extends Service {
 	 * @returns {Number}
 	 */
 	public getRatingForUser(
-		ctx: Context<GetRatingForUserParams, ServiceMeta>
+		ctx: Context<GetRatingForUser, ServiceMeta>
 	): Promise<number>;
 
 	/**
@@ -38,7 +37,7 @@ declare class RatingService extends Service {
 	 * @returns {RatingResponse}
 	 */
 	public removeRating(
-		ctx: Context<RemoveRatingParams, ServiceMeta>
+		ctx: Context<RemoveRating, ServiceMeta>
 	): Promise<RatingResponse>;
 
 	/**
@@ -50,7 +49,7 @@ declare class RatingService extends Service {
 	 * @returns {RatingResponse}
 	 */
 	public addRating(
-		ctx: Context<AddRatingParams, ServiceMeta>
+		ctx: Context<AddRating, ServiceMeta>
 	): Promise<RatingResponse>;
 
 	/**
@@ -62,7 +61,7 @@ declare class RatingService extends Service {
 	 * @returns {RatingResponse}
 	 */
 	public updateRating(
-		ctx: Context<UpdateRatingParams, ServiceMeta>
+		ctx: Context<UpdateRating, ServiceMeta>
 	): Promise<RatingResponse>;
 }
 

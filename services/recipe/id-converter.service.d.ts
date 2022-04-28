@@ -1,11 +1,11 @@
 import { Context, Service, ServiceBroker } from "moleculer";
 import { Recipe, RatingInfo } from "../../types";
 import {
-	ConvertRatingIDtoRatingParams,
-	ConvertRecipeParams,
-	ConvertRecipesParams,
-	ConvertTagsToIDParams,
-	ConvertTagsToNameParams,
+	ConvertRatingIDtoRating,
+	ConvertRecipe,
+	ConvertRecipes,
+	ConvertTagsToID,
+	ConvertTagsToName,
 	ServiceMeta,
 } from "../../shared";
 
@@ -20,7 +20,7 @@ declare class IDConverterService extends Service {
 	 * @param {Array<string>}
 	 */
 	public convertTagsToID(
-		ctx: Context<ConvertTagsToIDParams>
+		ctx: Context<ConvertTagsToID>
 	): Promise<string[]>;
 
 	/**
@@ -31,7 +31,7 @@ declare class IDConverterService extends Service {
 	 * @param {Array<string>}
 	 */
 	public convertTagsToName(
-		ctx: Context<ConvertTagsToNameParams>
+		ctx: Context<ConvertTagsToName>
 	): Promise<string[]>;
 
 	/**
@@ -42,7 +42,7 @@ declare class IDConverterService extends Service {
 	 * @returns {number}
 	 */
 	public convertRatingIDtoRating(
-		ctx: Context<ConvertRatingIDtoRatingParams>
+		ctx: Context<ConvertRatingIDtoRating>
 	): Promise<RatingInfo>;
 
 	/**
@@ -53,7 +53,7 @@ declare class IDConverterService extends Service {
 	 * @returns {Array<Recipe>}
 	 */
 	public convertRecipes(
-		ctx: Context<ConvertRecipesParams, ServiceMeta>
+		ctx: Context<ConvertRecipes, ServiceMeta>
 	): Promise<Recipe[]>;
 
 	/**
@@ -64,7 +64,7 @@ declare class IDConverterService extends Service {
 	 * @returns {Recipe}
 	 */
 	public convertRecipe(
-		ctx: Context<ConvertRecipeParams, ServiceMeta>
+		ctx: Context<ConvertRecipe, ServiceMeta>
 	): Promise<Recipe>;
 }
 

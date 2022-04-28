@@ -3,7 +3,7 @@
 import {Context, Service, ServiceBroker} from "moleculer";
 import Connection from "../../mixins/db.mixin";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
-import { FirstRatingParams, MAX_PAGE_SIZE, PAGE_SIZE, RecipeData, RecipeDeletionParams, RecipePictureUpdateParams } from "../../shared";
+import { FirstRating, MAX_PAGE_SIZE, PAGE_SIZE, RecipeData, RecipeDeletion, RecipePictureUpdate } from "../../shared";
 import { Units } from "../../types";
 export default class DataStoreService extends Service {
 	private DBConnection = new Connection("recipes").start();
@@ -51,34 +51,34 @@ export default class DataStoreService extends Service {
 						recipeID: "string",
 						ratingID: "string",
 					},
-					handler: (ctx: Context<FirstRatingParams>): void => this["recipe.first_rating"](ctx),
+					handler: (ctx: Context<FirstRating>): void => this["recipe.first_rating"](ctx),
 				},
 				"recipe.deletion": {
 					params: {
 						recipeID: "string",
 					},
-					handler: (ctx: Context<RecipeDeletionParams>): void => this["recipe.deletion"](ctx),
+					handler: (ctx: Context<RecipeDeletion>): void => this["recipe.deletion"](ctx),
 				},
 				"recipe.newPicutre": {
 					params: {
 						recipeID: "string",
 						imageName: "string",
 					},
-					handler: (ctx: Context<RecipePictureUpdateParams>): Promise<void> => this["recipe.newPicutre"](ctx),
+					handler: (ctx: Context<RecipePictureUpdate>): Promise<void> => this["recipe.newPicutre"](ctx),
 				},
 			},
 		}, schema));
 	}
 
-	public "recipe.first_rating"(ctx: Context<FirstRatingParams>): void {
+	public "recipe.first_rating"(ctx: Context<FirstRating>): void {
 		ctx.call("v1.data-store.update", { id: ctx.params.recipeID, rating: ctx.params.ratingID });
 	}
 
-	public "recipe.deletion"(ctx: Context<RecipeDeletionParams>): void {
+	public "recipe.deletion"(ctx: Context<RecipeDeletion>): void {
 		ctx.call("v1.data-store.remove", { id: ctx.params.recipeID });
 	}
 
-	public async "recipe.newPicutre"(ctx: Context<RecipePictureUpdateParams>): Promise<void> {
+	public async "recipe.newPicutre"(ctx: Context<RecipePictureUpdate>): Promise<void> {
 		const oldFile = (await ctx.call("v1.data-store.get", { id: ctx.params.recipeID }) as RecipeData).picture;
 		await ctx.call("v1.data-store.update", { id: ctx.params.recipeID, picture: ctx.params.imageName });
 		if (oldFile !== "NO_PIC") {ctx.emit("photo.delete", { fileName: oldFile });}

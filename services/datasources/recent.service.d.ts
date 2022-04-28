@@ -1,5 +1,5 @@
 import { Context, Service, ServiceBroker, ServiceSchema } from "moleculer";
-import { AddRecentParams, ServiceMeta } from "../../shared";
+import { AddRecent, ServiceMeta } from "../../shared";
 import { Recipe } from "../../types";
 
 declare class RecentService extends Service {
@@ -18,7 +18,7 @@ declare class RecentService extends Service {
 	 *
 	 * @event
 	 */
-	public addRecent(ctx: Context<AddRecentParams>): Promise<void>;
+	public addRecent(ctx: Context<AddRecent>): Promise<void>;
 }
 
 export = RecentService;

@@ -3,7 +3,7 @@
 import {Context, Service, ServiceBroker, ServiceSchema} from "moleculer";
 import Connection from "../../mixins/db.mixin";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
-import { AddFavoriteParams, BaseError, DatabaseError, FavoriteData, FetchError, FetchTarget, GetFavoriteParams, IsFavoriteParams, MAX_PAGE_SIZE, PAGE_SIZE, RecipeDeletionParams, RemoveFavoriteParams, ServiceMeta } from "../../shared";
+import { AddFavorite, BaseError, DatabaseError, FavoriteData, FetchError, FetchTarget, GetFavorite, IsFavorite, MAX_PAGE_SIZE, PAGE_SIZE, RecipeDeletion, RemoveFavorite, ServiceMeta } from "../../shared";
 import { Recipe, FavoriteResponse } from "../../types";
 
 export default class FavoriteService extends Service {
@@ -56,7 +56,7 @@ export default class FavoriteService extends Service {
 					params: {
 						recipeID: "string",
 					},
-					handler: async (ctx: Context<AddFavoriteParams, ServiceMeta>): Promise<FavoriteResponse> => this.addFavorite(ctx),
+					handler: async (ctx: Context<AddFavorite, ServiceMeta>): Promise<FavoriteResponse> => this.addFavorite(ctx),
 				},
 				removeFavorite: {
 					rest: {
@@ -66,7 +66,7 @@ export default class FavoriteService extends Service {
 					params: {
 						recipeID: "string",
 					},
-					handler: async (ctx: Context<RemoveFavoriteParams, ServiceMeta>): Promise<FavoriteResponse> => await this.removeFavorite(ctx),
+					handler: async (ctx: Context<RemoveFavorite, ServiceMeta>): Promise<FavoriteResponse> => await this.removeFavorite(ctx),
 				},
 				isFavorite: {
 					rest: {
@@ -76,7 +76,7 @@ export default class FavoriteService extends Service {
 					params: {
 						recipeID: "string",
 					},
-					handler: async (ctx: Context<IsFavoriteParams, ServiceMeta>): Promise<boolean> => await this.isFavorite(ctx),
+					handler: async (ctx: Context<IsFavorite, ServiceMeta>): Promise<boolean> => await this.isFavorite(ctx),
 				},
 			},
 			events: {
@@ -84,27 +84,27 @@ export default class FavoriteService extends Service {
 					params: {
 						recipeID: "string",
 					},
-					handler: async (ctx: Context<RecipeDeletionParams, ServiceMeta>) => this["recipe.deletion"](ctx),
+					handler: async (ctx: Context<RecipeDeletion, ServiceMeta>) => this["recipe.deletion"](ctx),
 				},
 			},
 		}, schema));
 	}
 
-	public async "recipe.deletion"(ctx: Context<RecipeDeletionParams, ServiceMeta>): Promise<void> {
+	public async "recipe.deletion"(ctx: Context<RecipeDeletion, ServiceMeta>): Promise<void> {
 		const userIds = (await ctx.call("v1.favorite.find", { fields: "userid" }) as FavoriteData[]).map(e => e.userid);
 		for (const id of userIds) {
 			this.removeFavorite(ctx, id, ctx.params.recipeID);
 		}
 	}
 
-	public async isFavorite(ctx: Context<IsFavoriteParams, ServiceMeta>): Promise<boolean> {
+	public async isFavorite(ctx: Context<IsFavorite, ServiceMeta>): Promise<boolean> {
 		const [ userID, recipeID ] = [ ctx.meta.user.id, ctx.params.recipeID ];
 		const favoriteData = (await this.getFavoriteData(userID, ctx));
 		if (!favoriteData) {return false;}
 		return favoriteData.favorites.findIndex(entry => entry === recipeID) !== -1;
 	}
 
-	public async getFavorites(ctx: Context<GetFavoriteParams, ServiceMeta>): Promise<Recipe[]> {
+	public async getFavorites(ctx: Context<GetFavorite, ServiceMeta>): Promise<Recipe[]> {
 		const userID = ctx.params?.userID || ctx.meta.user.id;
 		const favoriteData = (await this.getFavoriteData(userID, ctx));
 		const out = new Array<Recipe>();
@@ -123,7 +123,7 @@ export default class FavoriteService extends Service {
 		return out;
 	}
 
-	public async addFavorite(ctx: Context<AddFavoriteParams, ServiceMeta>): Promise<FavoriteResponse> {
+	public async addFavorite(ctx: Context<AddFavorite, ServiceMeta>): Promise<FavoriteResponse> {
 		const [ userID, recipeID ] = [ ctx.meta.user.id, ctx.params.recipeID ];
 		const favoritesOfUser = await this.getFavoriteData(userID, ctx);
 		if (favoritesOfUser) {
@@ -150,7 +150,7 @@ export default class FavoriteService extends Service {
 		}
 	}
 
-	public async removeFavorite(ctx: Context<RemoveFavoriteParams, ServiceMeta>, userID?: string, recipeID?: string): Promise<FavoriteResponse> {
+	public async removeFavorite(ctx: Context<RemoveFavorite, ServiceMeta>, userID?: string, recipeID?: string): Promise<FavoriteResponse> {
 		if (!userID && !recipeID ) { [ userID, recipeID ] = [ ctx.meta.user.id, ctx.params.recipeID ]; }
 		const favoritesOfUser = await this.getFavoriteData(userID, ctx);
 		if (favoritesOfUser) {

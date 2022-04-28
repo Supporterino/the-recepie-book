@@ -3,7 +3,7 @@
 import {Context, Service, ServiceBroker, ServiceSchema} from "moleculer";
 import Connection from "../../mixins/db.mixin";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
-import { BaseError, CheckForTagParams, DatabaseError, GetByStringParams, MAX_PAGE_SIZE, PAGE_SIZE } from "../../shared";
+import { BaseError, CheckForTag, DatabaseError, GetByString, MAX_PAGE_SIZE, PAGE_SIZE } from "../../shared";
 import { Tag } from "../../types";
 
 export default class TagService extends Service {
@@ -37,7 +37,7 @@ export default class TagService extends Service {
 					params: {
 						name: {type: "string", min: 2},
 					},
-					handler: async (ctx: Context<GetByStringParams>): Promise<Tag[]> => await this.getByString(ctx),
+					handler: async (ctx: Context<GetByString>): Promise<Tag[]> => await this.getByString(ctx),
 				},
 				checkForTag: {
 					rest: {
@@ -47,13 +47,13 @@ export default class TagService extends Service {
 					params: {
 						name: {type: "string", min: 2},
 					},
-					handler: async (ctx: Context<CheckForTagParams>): Promise<string> => await this.checkForTag(ctx),
+					handler: async (ctx: Context<CheckForTag>): Promise<string> => await this.checkForTag(ctx),
 				},
 			},
 		}, schema));
 	}
 
-	public async checkForTag(ctx: Context<CheckForTagParams>): Promise<string> {
+	public async checkForTag(ctx: Context<CheckForTag>): Promise<string> {
 		const tagName = ctx.params.name;
 		this.logger.info(`Checking if ${tagName} exists in the DB.`);
 		try {
@@ -73,7 +73,7 @@ export default class TagService extends Service {
 		}
 	}
 
-	public async getByString(ctx: Context<GetByStringParams>): Promise<Tag[]> {
+	public async getByString(ctx: Context<GetByString>): Promise<Tag[]> {
 		const name = ctx.params.name;
 		try {
 			return await ctx.call("v1.tags.find", { query: { name: { $regex: name, $options: "i" } } }) as Tag[];

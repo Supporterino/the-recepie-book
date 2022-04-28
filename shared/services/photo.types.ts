@@ -1,11 +1,11 @@
-export interface GetPhotoParams {
+export interface GetPhoto {
 	name: string;
 }
 
-export interface GetImageUrlParams {
+export interface GetImageUrl {
 	filename: string;
 }
 
-export interface PhotoDeletionParams {
+export interface PhotoDeletion {
 	fileName: string;
 }

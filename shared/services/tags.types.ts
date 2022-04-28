@@ -1,7 +1,7 @@
-export interface GetByStringParams {
+export interface GetByString {
 	name: string;
 }
 
-export interface CheckForTagParams {
+export interface CheckForTag {
 	name: string;
 }

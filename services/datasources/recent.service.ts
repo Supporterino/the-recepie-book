@@ -3,7 +3,7 @@
 import {Context, Service, ServiceBroker, ServiceSchema} from "moleculer";
 import Connection from "../../mixins/db.mixin";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
-import { AddRecentParams, BaseError, DatabaseError, FetchError, FetchTarget, MAX_PAGE_SIZE, PAGE_SIZE, RecentData, RECENTS_SIZE, ServiceMeta } from "../../shared";
+import { AddRecent, BaseError, DatabaseError, FetchError, FetchTarget, MAX_PAGE_SIZE, PAGE_SIZE, RecentData, RECENTS_SIZE, ServiceMeta } from "../../shared";
 import { Recipe } from "../../types";
 
 export default class RecentService extends Service {
@@ -45,7 +45,7 @@ export default class RecentService extends Service {
 						recipeID: "string",
 						userID: "string",
 					},
-					handler: async (ctx: Context<AddRecentParams>) => this.addRecent(ctx),
+					handler: async (ctx: Context<AddRecent>) => this.addRecent(ctx),
 				},
 			},
 		}, schema));
@@ -70,7 +70,7 @@ export default class RecentService extends Service {
 		return out;
 	}
 
-	public async addRecent(ctx: Context<AddRecentParams>): Promise<void> {
+	public async addRecent(ctx: Context<AddRecent>): Promise<void> {
 		const [ userID, recipeID ] = [ ctx.params.userID, ctx.params.recipeID ];
 		const recentsOfUser = await this.getRecentData(userID, ctx);
 		if (recentsOfUser) {

@@ -1,9 +1,9 @@
 "use strict";
 
-import {Context, Service, ServiceBroker, ServiceSchema} from "moleculer";
+import {Context, Errors, Service, ServiceBroker, ServiceSchema} from "moleculer";
 import Connection from "../../mixins/db.mixin";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
-import { DatabaseError, GetSanitizedUserParams, IsLegitUserParams, MAX_PAGE_SIZE, OwnsRecipeParams, PAGE_SIZE, RecipeData, ServiceMeta, UserAvatarUpdateParams, UserData, ChangeUsernameParams } from "../../shared";
+import { DatabaseError, GetSanitizedUser, IsLegitUser, MAX_PAGE_SIZE, OwnsRecipe, PAGE_SIZE, RecipeData, Rename, ServiceMeta, SetUserRole, UserAvatarUpdate, UserData } from "../../shared";
 import { Role, User } from "../../types";
 
 export default class UserService extends Service {
@@ -44,7 +44,7 @@ export default class UserService extends Service {
 						userID: "string",
 						email: { type: "email" },
 					},
-					handler: async (ctx: Context<IsLegitUserParams>): Promise<boolean> => await this.isLegitUser(ctx),
+					handler: async (ctx: Context<IsLegitUser>): Promise<boolean> => await this.isLegitUser(ctx),
 				},
 				ownsRecipe: {
 					rest: {
@@ -54,7 +54,7 @@ export default class UserService extends Service {
 					params: {
 						recipeID: "string",
 					},
-					handler: async (ctx: Context<OwnsRecipeParams, ServiceMeta>): Promise<boolean> => await this.ownsRecipe(ctx),
+					handler: async (ctx: Context<OwnsRecipe, ServiceMeta>): Promise<boolean> => await this.ownsRecipe(ctx),
 				},
 				getSanitizedUser: {
 					rest: {
@@ -64,17 +64,28 @@ export default class UserService extends Service {
 					params: {
 						userID: "string",
 					},
-					handler: async (ctx: Context<GetSanitizedUserParams, ServiceMeta>): Promise<User> => await this.getSanitizedUser(ctx),
+					handler: async (ctx: Context<GetSanitizedUser, ServiceMeta>): Promise<User> => await this.getSanitizedUser(ctx),
 				},
-				changeUsername: {
+				rename: {
 					rest: {
 						method: "POST",
-						path: "/changeUsername",
+						path: "/rename",
 					},
 					params: {
 						username: "string",
 					},
-					handler: async (ctx: Context<ChangeUsernameParams, ServiceMeta>): Promise<boolean> => await this.changeUsername(ctx),
+					handler: async (ctx: Context<Rename, ServiceMeta>): Promise<boolean> => await this.rename(ctx),
+				},
+				setUserRole: {
+					rest: {
+						method: "POST",
+						path: "/setUserRole",
+					},
+					params: {
+						userID: "string",
+						role: { type: "enum", values: Object.values(Role) },
+					},
+					handler: async (ctx: Context<SetUserRole, ServiceMeta>): Promise<void> => await this.setUserRole(ctx),
 				},
 			},
 			events: {
@@ -83,23 +94,31 @@ export default class UserService extends Service {
 						userID: "string",
 						imageName: "string",
 					},
-					handler: async (ctx: Context<UserAvatarUpdateParams>) => this["user.newAvatar"](ctx),
+					handler: async (ctx: Context<UserAvatarUpdate>) => this["user.newAvatar"](ctx),
 				},
 			},
 		}, schema));
 	}
 
-	public async "user.newAvatar"(ctx: Context<UserAvatarUpdateParams>): Promise<void> {
+	public async "user.newAvatar"(ctx: Context<UserAvatarUpdate>): Promise<void> {
 		const oldFile = (await ctx.call("v1.user.get", {id: ctx.params.userID}) as UserData).avatar;
 		await ctx.call("v1.user.update", { id: ctx.params.userID, avatar: ctx.params.imageName });
 		if (oldFile !== "NO_PIC") {ctx.emit("photo.delete", { fileName: oldFile });}
 	}
 
-	public async changeUsername(ctx: Context<ChangeUsernameParams, ServiceMeta>): Promise<boolean> {
+	public async setUserRole(ctx: Context<SetUserRole, ServiceMeta>): Promise<void> {
+		const [ userID, role, ownUserID, ownRole ] = [ ctx.params.userID, ctx.params.role, ctx.meta.user.id, ctx.meta.user.role ];
+		if (ownRole === Role.USER || ownRole === Role.MODERATOR) {throw new Errors.MoleculerError("Insufficient permission", 401);}
+		const userToModify = await ctx.call("v1.user.get", userID) as UserData;
+		if (userToModify.role > ownRole) {throw new Errors.MoleculerError("Targets permissions are higher then own one", 401);}
+		ctx.call("v1.user.update", { id: userID, role });
+	}
+
+	public async rename(ctx: Context<Rename, ServiceMeta>): Promise<boolean> {
 		const [ userID, username ] = [ ctx.meta.user.id, ctx.params.username ];
 		this.logger.info(`User[${userID}] Changing username to ${username}`);
 		try {
-			const updatedUser = await ctx.call("v1.user.update", { id: userID, username}) as UserData;
+			const updatedUser = await ctx.call("v1.user.update", { id: userID, username }) as UserData;
 			if (updatedUser.username !== username) {return false;}
 			return true;
 		} catch (error) {
@@ -107,7 +126,7 @@ export default class UserService extends Service {
 		}
 	}
 
-	public async getSanitizedUser(ctx: Context<GetSanitizedUserParams, ServiceMeta>): Promise<User> {
+	public async getSanitizedUser(ctx: Context<GetSanitizedUser, ServiceMeta>): Promise<User> {
 		const userID = ctx.params.userID;
 		const user = await ctx.call("v1.user.get", { id: userID }) as UserData;
 		return {
@@ -119,7 +138,7 @@ export default class UserService extends Service {
 		} as User;
 	}
 
-	public async isLegitUser(ctx: Context<IsLegitUserParams>): Promise<boolean> {
+	public async isLegitUser(ctx: Context<IsLegitUser>): Promise<boolean> {
 		const [ userID, email ] = [ ctx.params.userID, ctx.params.email ];
 		try {
 			const user = await ctx.call("v1.user.get", { id: userID }) as UserData;
@@ -130,7 +149,7 @@ export default class UserService extends Service {
 		}
 	}
 
-	public async ownsRecipe(ctx: Context<OwnsRecipeParams, ServiceMeta>): Promise<boolean> {
+	public async ownsRecipe(ctx: Context<OwnsRecipe, ServiceMeta>): Promise<boolean> {
 		const [ userID, recipeID ] = [ ctx.meta.user.id, ctx.params.recipeID ];
 		if (userID === (await ctx.call("v1.data-store.get", { id: recipeID }) as RecipeData).owner) {return true;}
 		else {return false;}

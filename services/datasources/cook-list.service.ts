@@ -3,7 +3,7 @@
 import {Context, Service, ServiceBroker, ServiceSchema} from "moleculer";
 import Connection from "../../mixins/db.mixin";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
-import { AddToCookListParams, BaseError, CookListData, DatabaseError, FetchError, FetchTarget, IsOnCookListParams, MAX_PAGE_SIZE, PAGE_SIZE, RecipeDeletionParams, RemoveFromCookListParams, ServiceMeta } from "../../shared";
+import { AddToCookList, BaseError, CookListData, DatabaseError, FetchError, FetchTarget, IsOnCookList, MAX_PAGE_SIZE, PAGE_SIZE, RecipeDeletionParams, RemoveFromCookList, ServiceMeta } from "../../shared";
 import { CookListResponse, Recipe } from "../../types";
 
 export default class CookListService extends Service {
@@ -46,7 +46,7 @@ export default class CookListService extends Service {
 					params: {
 						recipeID: "string",
 					},
-					handler: async (ctx: Context<AddToCookListParams, ServiceMeta>): Promise<CookListResponse> =>  await this.addToCookList(ctx),
+					handler: async (ctx: Context<AddToCookList, ServiceMeta>): Promise<CookListResponse> =>  await this.addToCookList(ctx),
 				},
 				 removeFromCookList: {
 					rest: {
@@ -56,7 +56,7 @@ export default class CookListService extends Service {
 					params: {
 						recipeID: "string",
 					},
-					handler: async (ctx: Context<RemoveFromCookListParams, ServiceMeta>): Promise<CookListResponse> => await this.removeFromCookList(ctx),
+					handler: async (ctx: Context<RemoveFromCookList, ServiceMeta>): Promise<CookListResponse> => await this.removeFromCookList(ctx),
 				},
 				 isOnCookList: {
 					rest: {
@@ -66,7 +66,7 @@ export default class CookListService extends Service {
 					params: {
 						recipeID: "string",
 					},
-					handler: async (ctx: Context<IsOnCookListParams, ServiceMeta>): Promise<boolean> => await this.isOnCookList(ctx),
+					handler: async (ctx: Context<IsOnCookList, ServiceMeta>): Promise<boolean> => await this.isOnCookList(ctx),
 				},
 			},
 			events: {
@@ -87,7 +87,7 @@ export default class CookListService extends Service {
 		}
 	}
 
-	public async isOnCookList(ctx: Context<IsOnCookListParams, ServiceMeta>): Promise<boolean> {
+	public async isOnCookList(ctx: Context<IsOnCookList, ServiceMeta>): Promise<boolean> {
 		const [ userID, recipeID ] = [ ctx.meta.user.id, ctx.params.recipeID ];
 		const cookListData = (await this.getCookListData(userID, ctx));
 		if (!cookListData) {return false;}
@@ -113,7 +113,7 @@ export default class CookListService extends Service {
 		return out;
 	}
 
-	public async addToCookList(ctx: Context<AddToCookListParams, ServiceMeta>): Promise<CookListResponse> {
+	public async addToCookList(ctx: Context<AddToCookList, ServiceMeta>): Promise<CookListResponse> {
 		const [ userID, recipeID ] = [ ctx.meta.user.id, ctx.params.recipeID ];
 		const cookListData = await this.getCookListData(userID, ctx);
 		if (cookListData) {
@@ -140,7 +140,7 @@ export default class CookListService extends Service {
 		}
 	}
 
-	public async removeFromCookList(ctx: Context<RemoveFromCookListParams, ServiceMeta>, userID?: string, recipeID?: string): Promise<CookListResponse> {
+	public async removeFromCookList(ctx: Context<RemoveFromCookList, ServiceMeta>, userID?: string, recipeID?: string): Promise<CookListResponse> {
 		if (!userID && !recipeID){ [ userID, recipeID ] = [ ctx.meta.user.id, ctx.params.recipeID ];}
 		const cookListData = await this.getCookListData(userID, ctx);
 		if (cookListData) {

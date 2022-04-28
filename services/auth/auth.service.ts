@@ -4,7 +4,7 @@ import {Context, Errors, Service, ServiceBroker} from "moleculer";
 import { verify } from "jsonwebtoken";
 import { hash } from "bcrypt";
 import { Auth, LoginResponse, Role } from "../../types";
-import { Authenticate, AuthError, BaseError, DatabaseError, LoginServiceResponse, RefreshToken, RegisterParams, RevokeToken, ServiceMeta, UserData } from "../../shared";
+import { Authenticate, AuthError, BaseError, DatabaseError, LoginServiceResponse, RefreshToken, Register, RevokeToken, ServiceMeta, UserData } from "../../shared";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
 
 export default class AuthService extends Service {
@@ -39,7 +39,7 @@ export default class AuthService extends Service {
 						password: "string",
 						email: { type: "email", normalize: true },
 					},
-					handler: async (ctx: Context<RegisterParams>): Promise<string> => await this.register(ctx),
+					handler: async (ctx: Context<Register>): Promise<string> => await this.register(ctx),
 				},
 				refreshToken: {
 					rest: {
@@ -76,7 +76,7 @@ export default class AuthService extends Service {
 		});
 	}
 
-	public async register(ctx: Context<RegisterParams>): Promise<string> {
+	public async register(ctx: Context<Register>): Promise<string> {
 		const [username, email, password] = [ctx.params.username, ctx.params.email, ctx.params.password];
 		this.logger.info("Checking if user is already registered.", email);
 		const oldUser = await this.getUser(email, ctx);
@@ -91,7 +91,7 @@ export default class AuthService extends Service {
 			password: await hash(password, this.SALT_ROUNDS),
 			email,
 			joinedAt: new Date(),
-			role: (await ctx.call("v1.user.count") === 0)? Role.ADMIN : Role.USER, // First user is admin
+			role: (await ctx.call("v1.user.count") === 0)? Role.SUPERADMIN : Role.USER, // First user is superadmin
 		} as UserData;
 		try {
 			this.logger.info(`Creating new account(${user.username}) for email: ${user.email}`);

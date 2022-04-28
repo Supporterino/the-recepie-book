@@ -1,17 +1,17 @@
-export interface AddRatingParams {
+export interface AddRating {
 	recipeID: string;
 	rating: number;
 }
 
-export interface UpdateRatingParams {
+export interface UpdateRating {
 	recipeID: string;
 	rating: number;
 }
 
-export interface RemoveRatingParams {
+export interface RemoveRating {
 	recipeID: string;
 }
 
-export interface GetRatingForUserParams {
+export interface GetRatingForUser {
 	recipeID: string;
 }

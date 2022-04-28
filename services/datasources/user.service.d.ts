@@ -1,11 +1,11 @@
 import { Context, Service, ServiceBroker, ServiceSchema } from "moleculer";
 import {
-	GetSanitizedUserParams,
-	IsLegitUserParams,
-	OwnsRecipeParams,
+	GetSanitizedUser,
+	IsLegitUser,
+	OwnsRecipe,
+	Rename,
 	ServiceMeta,
-	UserAvatarUpdateParams,
-	ChangeUsernameParams,
+	UserAvatarUpdate,
 } from "../../shared";
 import { User } from "../../types";
 
@@ -13,15 +13,15 @@ declare class UserService extends Service {
 	public constructor(broker: ServiceBroker, schema: ServiceSchema<{}>);
 
 	public "user.newAvatar"(
-		ctx: Context<UserAvatarUpdateParams>
+		ctx: Context<UserAvatarUpdate>
 	): Promise<void>;
 
-	public changeUsername(
-		ctx: Context<ChangeUsernameParams, ServiceMeta>
+	public rename(
+		ctx: Context<Rename, ServiceMeta>
 	): Promise<boolean>;
 
 	public getSanitizedUser(
-		ctx: Context<GetSanitizedUserParams, ServiceMeta>
+		ctx: Context<GetSanitizedUser, ServiceMeta>
 	): Promise<User>;
 
 	/**
@@ -32,7 +32,7 @@ declare class UserService extends Service {
 	 * @param {String} email
 	 * @returns {Boolean}
 	 */
-	public isLegitUser(ctx: Context<IsLegitUserParams>): Promise<boolean>;
+	public isLegitUser(ctx: Context<IsLegitUser>): Promise<boolean>;
 
 	/**
 	 * Checks if the userID matches the owner of the recipe
@@ -43,7 +43,7 @@ declare class UserService extends Service {
 	 * @returns {boolean}
 	 */
 	public ownsRecipe(
-		ctx: Context<OwnsRecipeParams, ServiceMeta>
+		ctx: Context<OwnsRecipe, ServiceMeta>
 	): Promise<boolean>;
 }
 

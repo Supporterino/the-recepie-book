@@ -2,7 +2,7 @@
 
 import { Context, Service, ServiceBroker} from "moleculer";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
-import { BaseError, DatabaseError, FilterError, FilterParams, FilterType, GetByIdParams, GetByMinRatingParams, GetByNameParams, GetByTagsParams, GetFromUserParams, RatingData, RecipeData, ServiceMeta } from "../../shared";
+import { BaseError, DatabaseError, FilterError, Filter, FilterType, GetById, GetByMinRating, GetByName, GetByTags, GetFromUser, RatingData, RecipeData, ServiceMeta } from "../../shared";
 import { Recipe, Tag } from "../../types";
 
 
@@ -22,7 +22,7 @@ export default class RecipeProviderService extends Service {
 					params: {
 						recipeID: {type: "string", min: 2},
 					},
-					handler: async (ctx: Context<GetByIdParams, ServiceMeta>): Promise<RecipeData> => await this.getById(ctx),
+					handler: async (ctx: Context<GetById, ServiceMeta>): Promise<RecipeData> => await this.getById(ctx),
 				},
 				 getFromUser: {
 					rest: {
@@ -32,7 +32,7 @@ export default class RecipeProviderService extends Service {
 					params: {
 						userID: "string",
 					},
-					handler: async (ctx: Context<GetFromUserParams, ServiceMeta>): Promise<RecipeData[]> => await this.getFromUser(ctx),
+					handler: async (ctx: Context<GetFromUser, ServiceMeta>): Promise<RecipeData[]> => await this.getFromUser(ctx),
 				},
 				 getMyRecipes: {
 					rest: {
@@ -49,7 +49,7 @@ export default class RecipeProviderService extends Service {
 					params: {
 						name: {type: "string", min: 2},
 					},
-					handler: async (ctx: Context<GetByNameParams, ServiceMeta>): Promise<RecipeData[]> => await this.getByName(ctx),
+					handler: async (ctx: Context<GetByName, ServiceMeta>): Promise<RecipeData[]> => await this.getByName(ctx),
 				},
 				getByTags: {
 					rest: {
@@ -60,7 +60,7 @@ export default class RecipeProviderService extends Service {
 						tags: {type: "array", min: 1, items: "string"},
 						intersect: {type: "boolean", optional: true, default: false},
 					},
-					handler: async (ctx: Context<GetByTagsParams, ServiceMeta>): Promise<RecipeData[]> => await this.getByTags(ctx),
+					handler: async (ctx: Context<GetByTags, ServiceMeta>): Promise<RecipeData[]> => await this.getByTags(ctx),
 				},
 				getByMinRating: {
 					rest: {
@@ -70,7 +70,7 @@ export default class RecipeProviderService extends Service {
 					params: {
 						rating: {type: "number"},
 					},
-					handler: async (ctx: Context<GetByMinRatingParams, ServiceMeta>): Promise<RecipeData[]> => await this.getByMinRating(ctx),
+					handler: async (ctx: Context<GetByMinRating, ServiceMeta>): Promise<RecipeData[]> => await this.getByMinRating(ctx),
 				},
 				filter: {
 					rest: {
@@ -82,7 +82,7 @@ export default class RecipeProviderService extends Service {
 						ratingMin: {type: "number"},
 						tags: {type: "array", items:"string"},
 					},
-					handler: async (ctx: Context<FilterParams, ServiceMeta>): Promise<RecipeData[]> => await this.filterRecipes(ctx),
+					handler: async (ctx: Context<Filter, ServiceMeta>): Promise<RecipeData[]> => await this.filterRecipes(ctx),
 				},
 				getFeaturedRecipes: {
 					rest: {
@@ -107,7 +107,7 @@ export default class RecipeProviderService extends Service {
 		else {return await ctx.call("v1.id-converter.convertRecipe", { recipe: res }, { meta: ctx.meta }) as Recipe;}
 	}
 
-	public async getFromUser(ctx: Context<GetFromUserParams, ServiceMeta>): Promise<RecipeData[]> {
+	public async getFromUser(ctx: Context<GetFromUser, ServiceMeta>): Promise<RecipeData[]> {
 		const userID = ctx.params.userID || ctx.meta.user.id;
 		this.logger.info(`Fetching recipe for user: ${userID}`);
 		try {
@@ -131,7 +131,7 @@ export default class RecipeProviderService extends Service {
 		}
 	}
 
-	public async filterRecipes(ctx: Context<FilterParams, ServiceMeta>): Promise<RecipeData[]> {
+	public async filterRecipes(ctx: Context<Filter, ServiceMeta>): Promise<RecipeData[]> {
 		const [ name, rating, tags ] = [ ctx.params.text, ctx.params.ratingMin, ctx.params.tags ];
 		this.logger.info("Filtering with following settings:", name, rating, tags);
 		if (name === "" && tags.length === 0 && rating === 0) {return await ctx.call("v1.recipe-provider.getFeaturedRecipes");}
@@ -147,7 +147,7 @@ export default class RecipeProviderService extends Service {
 		}
 	}
 
-	public async getByMinRating(ctx: Context<GetByMinRatingParams, ServiceMeta>): Promise<RecipeData[]> {
+	public async getByMinRating(ctx: Context<GetByMinRating, ServiceMeta>): Promise<RecipeData[]> {
 		const rating = ctx.params.rating;
 		this.logger.info(`Fetching recipes with rating over ${rating}`);
 		try {
@@ -161,7 +161,7 @@ export default class RecipeProviderService extends Service {
 		}
 	}
 
-	public async getByTags(ctx: Context<GetByTagsParams, ServiceMeta>): Promise<RecipeData[]> {
+	public async getByTags(ctx: Context<GetByTags, ServiceMeta>): Promise<RecipeData[]> {
 		const [ tags, intersect ] = [ ctx.params.tags, ctx.params.intersect ];
 		const tagIDs = await this.convertTagsInIDs(tags, ctx);
 		this.logger.info(`Fetching recipes for multiple tags (intersected=${intersect}): ${tags}`);
@@ -176,7 +176,7 @@ export default class RecipeProviderService extends Service {
 		return  out;
 	}
 
-	public async getByName(ctx: Context<GetByNameParams, ServiceMeta>): Promise<RecipeData[]> {
+	public async getByName(ctx: Context<GetByName, ServiceMeta>): Promise<RecipeData[]> {
 		const name = ctx.params.name;
 		this.logger.info(`Fetching recipes with name which includes: ${name}`);
 		try {
@@ -186,7 +186,7 @@ export default class RecipeProviderService extends Service {
 		}
 	}
 
-	public async getById(ctx: Context<GetByIdParams, ServiceMeta>): Promise<RecipeData> {
+	public async getById(ctx: Context<GetById, ServiceMeta>): Promise<RecipeData> {
 		const recipeID = ctx.params.recipeID;
 		this.logger.info(`Fetching recipe with ID: ${recipeID}`);
 		try {
