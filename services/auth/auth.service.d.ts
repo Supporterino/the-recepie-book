@@ -3,7 +3,7 @@ import { Auth, LoginResponse } from "../../types";
 import {
 	Authenticate,
 	RefreshToken,
-	RegisterParams,
+	Register,
 	RevokeToken,
 	ServiceMeta,
 } from "../../shared";
@@ -20,7 +20,7 @@ declare class AuthService extends Service {
 	 * @param {String} email - The email to link to the account, has to be unique over all accounts
 	 * @returns {String}
 	 */
-	public register(ctx: Context<RegisterParams>): Promise<string>;
+	public register(ctx: Context<Register>): Promise<string>;
 
 	/**
 	 * Checks if a JWT token is valid and if it isn't expired it returns the encoded {@link Auth} data.

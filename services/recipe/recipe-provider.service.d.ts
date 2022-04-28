@@ -1,11 +1,11 @@
 import { Context, Service, ServiceBroker } from "moleculer";
 import {
-	FilterParams,
-	GetByIdParams,
-	GetByMinRatingParams,
-	GetByNameParams,
-	GetByTagsParams,
-	GetFromUserParams,
+	Filter,
+	GetById,
+	GetByMinRating,
+	GetByName,
+	GetByTags,
+	GetFromUser,
 	RecipeData,
 	ServiceMeta,
 } from "../../shared";
@@ -27,7 +27,7 @@ declare class RecipeProviderService extends Service {
 	 * @returns {RecipeData} - The recipe as JSON string
 	 */
 	public getFromUser(
-		ctx: Context<GetFromUserParams, ServiceMeta>
+		ctx: Context<GetFromUser, ServiceMeta>
 	): Promise<RecipeData[]>;
 
 	/**
@@ -50,7 +50,7 @@ declare class RecipeProviderService extends Service {
 	 * @returns {Array<RecipeData>} - A list of matching recipes as JSON string
 	 */
 	public filterRecipes(
-		ctx: Context<FilterParams, ServiceMeta>
+		ctx: Context<Filter, ServiceMeta>
 	): Promise<RecipeData[]>;
 
 	/**
@@ -61,7 +61,7 @@ declare class RecipeProviderService extends Service {
 	 * @returns {Array<RecipeData>} - A list of matching recipes as JSON string
 	 */
 	public getByMinRating(
-		ctx: Context<GetByMinRatingParams, ServiceMeta>
+		ctx: Context<GetByMinRating, ServiceMeta>
 	): Promise<RecipeData[]>;
 
 	/**
@@ -73,7 +73,7 @@ declare class RecipeProviderService extends Service {
 	 * @returns {Array<RecipeData>} - A list of matching recipes as JSON string
 	 */
 	public getByTags(
-		ctx: Context<GetByTagsParams, ServiceMeta>
+		ctx: Context<GetByTags, ServiceMeta>
 	): Promise<RecipeData[]>;
 
 	/**
@@ -84,7 +84,7 @@ declare class RecipeProviderService extends Service {
 	 * @returns {Array<RecipeData>} - A list of matching recipes as JSON string
 	 */
 	public getByName(
-		ctx: Context<GetByNameParams, ServiceMeta>
+		ctx: Context<GetByName, ServiceMeta>
 	): Promise<RecipeData[]>;
 
 	/**
@@ -95,7 +95,7 @@ declare class RecipeProviderService extends Service {
 	 * @returns {RecipeData} - The recipe as JSON string
 	 */
 	public getById(
-		ctx: Context<GetByIdParams, ServiceMeta>
+		ctx: Context<GetById, ServiceMeta>
 	): Promise<RecipeData>;
 }
 

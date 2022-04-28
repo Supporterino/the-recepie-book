@@ -1,26 +1,26 @@
-export interface GetByIdParams {
+export interface GetById {
 	recipeID: string;
 }
 
-export interface GetByNameParams {
+export interface GetByName {
 	name: string;
 }
 
-export interface GetByTagsParams {
+export interface GetByTags {
 	tags: string[];
 	intersect: boolean;
 }
 
-export interface GetByMinRatingParams {
+export interface GetByMinRating {
 	rating: number;
 }
 
-export interface FilterParams {
+export interface Filter {
 	text: string;
 	ratingMin: number;
 	tags: string[];
 }
 
-export interface GetFromUserParams {
+export interface GetFromUser {
 	userID: string;
 }

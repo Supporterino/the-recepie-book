@@ -1,10 +1,10 @@
 import { Service, Context } from "moleculer";
 import {
-	AddFavoriteParams,
-	GetFavoriteParams,
-	IsFavoriteParams,
-	RecipeDeletionParams,
-	RemoveFavoriteParams,
+	AddFavorite,
+	GetFavorite,
+	IsFavorite,
+	RecipeDeletion,
+	RemoveFavorite,
 	ServiceMeta,
 } from "../../shared";
 import { Recipe, FavoriteResponse } from "../../types";
@@ -15,7 +15,7 @@ declare class FavoriteService extends Service {
 	 *
 	 * @event
 	 */
-	public "recipe.deletion"(ctx: Context<RecipeDeletionParams>): Promise<void>;
+	public "recipe.deletion"(ctx: Context<RecipeDeletion>): Promise<void>;
 
 	/**
 	 * Check if a recipe is favorited
@@ -25,7 +25,7 @@ declare class FavoriteService extends Service {
 	 * @returns {FavoriteResponse}
 	 */
 	public isFavorite(
-		ctx: Context<IsFavoriteParams, ServiceMeta>
+		ctx: Context<IsFavorite, ServiceMeta>
 	): Promise<boolean>;
 
 	/**
@@ -36,7 +36,7 @@ declare class FavoriteService extends Service {
 	 * @returns {Array<Recipe>} - The favorited recipes of the user
 	 */
 	public getFavorites(
-		ctx: Context<GetFavoriteParams, ServiceMeta>
+		ctx: Context<GetFavorite, ServiceMeta>
 	): Promise<Recipe[]>;
 
 	/**
@@ -47,7 +47,7 @@ declare class FavoriteService extends Service {
 	 * @returns {FavoriteResponse}
 	 */
 	public addFavorite(
-		ctx: Context<AddFavoriteParams, ServiceMeta>
+		ctx: Context<AddFavorite, ServiceMeta>
 	): Promise<FavoriteResponse>;
 
 	/**
@@ -58,7 +58,7 @@ declare class FavoriteService extends Service {
 	 * @returns {FavoriteResponse}
 	 */
 	public removeFavorite(
-		ctx: Context<RemoveFavoriteParams, ServiceMeta>
+		ctx: Context<RemoveFavorite, ServiceMeta>
 	): Promise<FavoriteResponse>;
 }
 

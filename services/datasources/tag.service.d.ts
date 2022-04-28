@@ -1,5 +1,5 @@
 import { Context, Service, ServiceBroker, ServiceSchema } from "moleculer";
-import { CheckForTagParams, GetByStringParams } from "../../shared";
+import { CheckForTag, GetByString } from "../../shared";
 import { Tag } from "../../types";
 
 declare class TagService extends Service {
@@ -12,7 +12,7 @@ declare class TagService extends Service {
 	 * @param {String} name - the name of the tag to check
 	 * @returns {String} - The id of the tag
 	 */
-	public checkTagAndGetID(ctx: Context<CheckForTagParams>): Promise<string>;
+	public checkTagAndGetID(ctx: Context<CheckForTag>): Promise<string>;
 
 	/**
 	 * Returns a list of possible tags containing the provided string
@@ -21,7 +21,7 @@ declare class TagService extends Service {
 	 * @param {String} name - The string to search inside the tags table
 	 * @returns {Array<string>} - A list of the matching tags as JSON string
 	 */
-	public getTagByName(ctx: Context<GetByStringParams>): Promise<Tag[]>;
+	public getTagByName(ctx: Context<GetByString>): Promise<Tag[]>;
 }
 
 export = TagService;

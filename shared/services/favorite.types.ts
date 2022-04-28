@@ -1,15 +1,15 @@
-export interface GetFavoriteParams {
+export interface GetFavorite {
 	userID: string;
 }
 
-export interface AddFavoriteParams {
+export interface AddFavorite {
 	recipeID: string;
 }
 
-export interface RemoveFavoriteParams {
+export interface RemoveFavorite {
 	recipeID: string;
 }
 
-export interface IsFavoriteParams {
+export interface IsFavorite {
 	recipeID: string;
 }

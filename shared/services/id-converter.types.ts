@@ -1,21 +1,21 @@
 import { RecipeData } from "../interfaces";
 
-export interface ConvertRecipeParams {
+export interface ConvertRecipe {
 	recipe: RecipeData;
 }
 
-export interface ConvertRecipesParams {
+export interface ConvertRecipes {
 	recipes: RecipeData[];
 }
 
-export interface ConvertTagsToIDParams {
+export interface ConvertTagsToID {
 	tagNames: string[];
 }
 
-export interface ConvertTagsToNameParams {
+export interface ConvertTagsToName {
 	tagIDs: string[];
 }
 
-export interface ConvertRatingIDtoRatingParams {
+export interface ConvertRatingIDtoRating {
 	ratingID: string;
 }

@@ -1,21 +1,28 @@
-export interface IsLegitUserParams {
+import { Role } from "../../types";
+
+export interface IsLegitUser {
 	userID: string;
 	email: string;
 }
 
-export interface OwnsRecipeParams {
+export interface OwnsRecipe {
 	recipeID: string;
 }
 
-export interface GetSanitizedUserParams {
+export interface GetSanitizedUser {
 	userID: string;
 }
 
-export interface UserAvatarUpdateParams {
+export interface UserAvatarUpdate {
 	userID: string;
 	imageName: string;
 }
 
-export interface ChangeUsernameParams {
+export interface Rename {
 	username: string;
+}
+
+export interface SetUserRole {
+	userID: string;
+	role: Role;
 }

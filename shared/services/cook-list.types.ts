@@ -1,11 +1,11 @@
-export interface AddToCookListParams {
+export interface AddToCookList {
 	recipeID: string;
 }
 
-export interface RemoveFromCookListParams {
+export interface RemoveFromCookList {
 	recipeID: string;
 }
 
-export interface IsOnCookListParams {
+export interface IsOnCookList {
 	recipeID: string;
 }

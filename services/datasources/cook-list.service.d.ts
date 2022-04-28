@@ -1,9 +1,9 @@
 import { Context, Service, ServiceBroker, ServiceSchema } from "moleculer";
 import {
-	AddToCookListParams,
-	IsOnCookListParams,
+	AddToCookList,
+	IsOnCookList,
 	RecipeDeletionParams,
-	RemoveFromCookListParams,
+	RemoveFromCookList,
 	ServiceMeta,
 } from "../../shared";
 import { CookListResponse, Recipe } from "../../types";
@@ -19,7 +19,7 @@ declare class CookListService extends Service {
 	 * @returns {boolean}
 	 */
 	public isOnCookList(
-		ctx: Context<IsOnCookListParams, ServiceMeta>
+		ctx: Context<IsOnCookList, ServiceMeta>
 	): Promise<boolean>;
 
 	/**
@@ -38,7 +38,7 @@ declare class CookListService extends Service {
 	 * @returns {CookListResponse}
 	 */
 	public addToCookList(
-		ctx: Context<AddToCookListParams, ServiceMeta>
+		ctx: Context<AddToCookList, ServiceMeta>
 	): Promise<CookListResponse>;
 
 	/**
@@ -49,7 +49,7 @@ declare class CookListService extends Service {
 	 * @returns {CookListResponse}
 	 */
 	public removeFromCookList(
-		ctx: Context<RemoveFromCookListParams, ServiceMeta>
+		ctx: Context<RemoveFromCookList, ServiceMeta>
 	): Promise<CookListResponse>;
 
 	/**

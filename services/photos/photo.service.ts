@@ -4,7 +4,7 @@ import { Transform } from "stream";
 import { Context, Service, ServiceBroker} from "moleculer";
 import {v4 as uuidv4} from "uuid";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
-import { BASE_URL, GetImageUrlParams, GetPhotoParams, PhotoDeletionParams, PhotoUploadMeta, PREFIX } from "../../shared";
+import { BASE_URL, GetImageUrl, GetPhoto, PhotoDeletion, PhotoUploadMeta, PREFIX } from "../../shared";
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const MongoClient = require("mongodb").MongoClient;
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -25,7 +25,7 @@ export default class PhotoService extends Service {
 					params: {
 						name: "string",
 					},
-					handler: (ctx: Context<GetPhotoParams>) => this.getImage(ctx.params.name),
+					handler: (ctx: Context<GetPhoto>) => this.getImage(ctx.params.name),
 				},
 				save: {
 					handler: (ctx: Context<Transform, PhotoUploadMeta>) => this.saveImage(ctx),
@@ -34,7 +34,7 @@ export default class PhotoService extends Service {
 					params: {
 						filename: "string",
 					},
-					handler: (ctx: Context<GetImageUrlParams>): string => `${BASE_URL}${PREFIX}${ctx.params.filename}`,
+					handler: (ctx: Context<GetImageUrl>): string => `${BASE_URL}${PREFIX}${ctx.params.filename}`,
 				},
 			},
 			events: {
@@ -42,7 +42,7 @@ export default class PhotoService extends Service {
 					params: {
 						fileName: "string",
 					},
-					handler: (ctx: Context<PhotoDeletionParams>) => {
+					handler: (ctx: Context<PhotoDeletion>) => {
 						this.deleteImage(ctx.params.fileName);
 					},
 				},

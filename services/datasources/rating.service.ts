@@ -3,7 +3,7 @@
 import {Context, Service, ServiceBroker, ServiceSchema} from "moleculer";
 import Connection from "../../mixins/db.mixin";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
-import { AddRatingParams, AuthError, DatabaseError, GetRatingForUserParams, MAX_PAGE_SIZE, PAGE_SIZE,RatingData, RatingEntry, RecipeDeletionParams, RemoveRatingParams, ServiceMeta, UpdateRatingParams } from "../../shared";
+import { AddRating, AuthError, DatabaseError, GetRatingForUser, MAX_PAGE_SIZE, PAGE_SIZE,RatingData, RatingEntry, RecipeDeletion, RemoveRating, ServiceMeta, UpdateRating } from "../../shared";
 import { RatingResponse, RatingOperations } from "../../types";
 
 export default class RatingService extends Service {
@@ -42,7 +42,7 @@ export default class RatingService extends Service {
 						recipeID: "string",
 						rating: "number",
 					},
-					handler: async (ctx: Context<AddRatingParams, ServiceMeta>): Promise<RatingResponse> => await this.addRating(ctx),
+					handler: async (ctx: Context<AddRating, ServiceMeta>): Promise<RatingResponse> => await this.addRating(ctx),
 				},
 				updateRating: {
 					rest: {
@@ -53,7 +53,7 @@ export default class RatingService extends Service {
 						recipeID: "string",
 						rating: "number",
 					},
-					handler: async (ctx: Context<UpdateRatingParams, ServiceMeta>): Promise<RatingResponse> => await this.updateRating(ctx),
+					handler: async (ctx: Context<UpdateRating, ServiceMeta>): Promise<RatingResponse> => await this.updateRating(ctx),
 				},
 				removeRating: {
 					rest: {
@@ -63,7 +63,7 @@ export default class RatingService extends Service {
 					params: {
 						recipeID: "string",
 					},
-					handler: async (ctx: Context<RemoveRatingParams, ServiceMeta>): Promise<RatingResponse> => await this.removeRating(ctx),
+					handler: async (ctx: Context<RemoveRating, ServiceMeta>): Promise<RatingResponse> => await this.removeRating(ctx),
 				},
 				getRatingForUser: {
 					rest: {
@@ -73,7 +73,7 @@ export default class RatingService extends Service {
 					params: {
 						recipeID: "string",
 					},
-					handler: async (ctx: Context<GetRatingForUserParams, ServiceMeta>): Promise<number> => await this.getRatingForUser(ctx),
+					handler: async (ctx: Context<GetRatingForUser, ServiceMeta>): Promise<number> => await this.getRatingForUser(ctx),
 				},
 			},
 			events: {
@@ -81,18 +81,18 @@ export default class RatingService extends Service {
 					params: {
 						recipeID: "string",
 					},
-					handler: async (ctx: Context<RecipeDeletionParams>): Promise<void> => this["recipe.deletion"](ctx),
+					handler: async (ctx: Context<RecipeDeletion>): Promise<void> => this["recipe.deletion"](ctx),
 				},
 			},
 		}, schema));
 	}
 
-	public async "recipe.deletion"(ctx: Context<RecipeDeletionParams>): Promise<void> {
+	public async "recipe.deletion"(ctx: Context<RecipeDeletion>): Promise<void> {
 		const id = (await this.getByRecipeID(ctx.params.recipeID, ctx) as RatingData).id;
 		ctx.call("v1.rating.remove", { id });
 	}
 
-	public async getRatingForUser(ctx: Context<GetRatingForUserParams, ServiceMeta>): Promise<number> {
+	public async getRatingForUser(ctx: Context<GetRatingForUser, ServiceMeta>): Promise<number> {
 		const [ recipeID, userID ] = [ ctx.params.recipeID, ctx.meta.user.id ];
 		if (!userID) {throw new AuthError("Unauthorized! No user logged in.", 401);}
 		const recipeRating = await this.getByRecipeID(recipeID, ctx);
@@ -102,7 +102,7 @@ export default class RatingService extends Service {
 		return userRating.rating;
 	}
 
-	public async removeRating(ctx: Context<RemoveRatingParams, ServiceMeta>): Promise<RatingResponse> {
+	public async removeRating(ctx: Context<RemoveRating, ServiceMeta>): Promise<RatingResponse> {
 		const [ recipeID, userID ] = [ ctx.params.recipeID, ctx.meta.user.id ];
 		const recipeRating = await this.getByRecipeID(recipeID, ctx);
 		if (!recipeRating) {
@@ -127,7 +127,7 @@ export default class RatingService extends Service {
 		}
 	}
 
-	public async addRating(ctx: Context<AddRatingParams, ServiceMeta>): Promise<RatingResponse> {
+	public async addRating(ctx: Context<AddRating, ServiceMeta>): Promise<RatingResponse> {
 		const [ recipeID, userID, rating ] = [ ctx.params.recipeID, ctx.meta.user.id, ctx.params.rating ];
 		let recipeRating: RatingData = null;
 		const existingRating = await this.getByRecipeID(recipeID, ctx);
@@ -153,7 +153,7 @@ export default class RatingService extends Service {
 		}
 	}
 
-	public async updateRating(ctx: Context<UpdateRatingParams, ServiceMeta>): Promise<RatingResponse> {
+	public async updateRating(ctx: Context<UpdateRating, ServiceMeta>): Promise<RatingResponse> {
 		const [ recipeID, userID, rating ] = [ ctx.params.recipeID, ctx.meta.user.id, ctx.params.rating ];
 		const recipeRating = await this.getByRecipeID(recipeID, ctx);
 		if (!recipeRating) {

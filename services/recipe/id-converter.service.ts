@@ -2,7 +2,7 @@
 
 import { Context, Service, ServiceBroker} from "moleculer";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
-import { BaseError, ConvertRatingIDtoRatingParams, ConvertRecipeParams, ConvertRecipesParams, ConvertTagsToIDParams, ConvertTagsToNameParams, DatabaseError, RatingData, RecipeData, ServiceMeta } from "../../shared";
+import { BaseError, ConvertRatingIDtoRating, ConvertRecipe, ConvertRecipes, ConvertTagsToID, ConvertTagsToName, DatabaseError, RatingData, ServiceMeta } from "../../shared";
 import { Units, Recipe, Tag, User, RatingInfo } from "../../types";
 
 export default class IDConverterService extends Service {
@@ -28,7 +28,7 @@ export default class IDConverterService extends Service {
 							updateTimestamp: { type: "date", convert: true },
 						} },
 					},
-					handler: async (ctx: Context<ConvertRecipeParams, ServiceMeta>): Promise<Recipe> => await this.convertRecipe(ctx),
+					handler: async (ctx: Context<ConvertRecipe, ServiceMeta>): Promise<Recipe> => await this.convertRecipe(ctx),
 				},
 				convertRecipes: {
 					params: {
@@ -45,31 +45,31 @@ export default class IDConverterService extends Service {
 							updateTimestamp: { type: "date", convert: true },
 						}} },
 					},
-					handler: async (ctx: Context<ConvertRecipesParams, ServiceMeta>): Promise<Recipe[]> => await this.convertRecipes(ctx),
+					handler: async (ctx: Context<ConvertRecipes, ServiceMeta>): Promise<Recipe[]> => await this.convertRecipes(ctx),
 				},
 				convertTagsToID: {
 					params: {
 						tagNames: { type: "array", items: "string" },
 					},
-					handler: async (ctx: Context<ConvertTagsToIDParams>): Promise<string[]> => await this.convertTagsToID(ctx),
+					handler: async (ctx: Context<ConvertTagsToID>): Promise<string[]> => await this.convertTagsToID(ctx),
 				},
 				convertTagsToName: {
 					params: {
  						tagIDs: { type: "array", items: "string" },
 					},
-					handler: async (ctx: Context<ConvertTagsToNameParams>): Promise<string[]> => await this.convertTagsToName(ctx),
+					handler: async (ctx: Context<ConvertTagsToName>): Promise<string[]> => await this.convertTagsToName(ctx),
 				},
 				convertRatingIDtoRating: {
 					params: {
 						ratingID: "string",
 					},
-					handler: async (ctx: Context<ConvertRatingIDtoRatingParams>): Promise<RatingInfo> => await this.convertRatingIDtoRating(ctx),
+					handler: async (ctx: Context<ConvertRatingIDtoRating>): Promise<RatingInfo> => await this.convertRatingIDtoRating(ctx),
 				},
 			},
 		});
 	}
 
-	public async convertTagsToID(ctx: Context<ConvertTagsToIDParams>): Promise<string[]> {
+	public async convertTagsToID(ctx: Context<ConvertTagsToID>): Promise<string[]> {
 		const tagNames = ctx.params.tagNames;
 		this.logger.info("[Converter] Parse tags to id.", tagNames);
 		try {
@@ -87,7 +87,7 @@ export default class IDConverterService extends Service {
 		}
 	}
 
-	public async convertTagsToName(ctx: Context<ConvertTagsToNameParams>): Promise<string[]> {
+	public async convertTagsToName(ctx: Context<ConvertTagsToName>): Promise<string[]> {
 		const tagIDs = ctx.params.tagIDs;
 		this.logger.info("[Converter] Parse tag ids into name.", tagIDs);
 		try {
@@ -102,7 +102,7 @@ export default class IDConverterService extends Service {
 		}
 	}
 
-	public async convertRatingIDtoRating(ctx: Context<ConvertRatingIDtoRatingParams>): Promise<RatingInfo> {
+	public async convertRatingIDtoRating(ctx: Context<ConvertRatingIDtoRating>): Promise<RatingInfo> {
 		const ratingID = ctx.params.ratingID;
 		this.logger.info(`[Converter] Getting avg rating for rating id: ${ratingID}`);
  		if (ratingID === "") {return { avgRating: 0, numOfRatings: 0} as RatingInfo;}
@@ -116,7 +116,7 @@ export default class IDConverterService extends Service {
 		}
 	}
 
-	public async convertRecipes(ctx: Context<ConvertRecipesParams, ServiceMeta>): Promise<Recipe[]> {
+	public async convertRecipes(ctx: Context<ConvertRecipes, ServiceMeta>): Promise<Recipe[]> {
 		const recipes = ctx.params.recipes;
 		const promises = new Array<Promise<Recipe>>();
         for (const recipe of recipes) {
@@ -125,7 +125,7 @@ export default class IDConverterService extends Service {
 		return Promise.all(promises).then(recepies => recepies);
     }
 
-    public async convertRecipe(ctx: Context<ConvertRecipeParams, ServiceMeta>): Promise<Recipe> {
+    public async convertRecipe(ctx: Context<ConvertRecipe, ServiceMeta>): Promise<Recipe> {
 		const [ recipe, userID ] = [ ctx.params.recipe, ctx.meta.user?.id ];
 		this.logger.info(`[Converter] Converting recipe: ${recipe.id}`);
 		try {

@@ -1,5 +1,5 @@
 import { Context, Service, ServiceBroker } from "moleculer";
-import { RecipeDeletionParams, ServiceMeta } from "../../shared";
+import { RecipeDeletion, ServiceMeta } from "../../shared";
 import { DeletionResponse } from "../../types";
 
 declare class RecipeDeletionService extends Service {
@@ -13,7 +13,7 @@ declare class RecipeDeletionService extends Service {
 	 * @returns {DeletionResponse}
 	 */
 	public deleteRecipe(
-		ctx: Context<RecipeDeletionParams, ServiceMeta>
+		ctx: Context<RecipeDeletion, ServiceMeta>
 	): Promise<DeletionResponse>;
 }
 
