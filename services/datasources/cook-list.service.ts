@@ -3,7 +3,7 @@
 import {Context, Service, ServiceBroker, ServiceSchema} from "moleculer";
 import Connection from "../../mixins/db.mixin";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
-import { AddToCookList, BaseError, CookListData, DatabaseError, FetchError, FetchTarget, IsOnCookList, MAX_PAGE_SIZE, PAGE_SIZE, RecipeDeletionParams, RemoveFromCookList, ServiceMeta } from "../../shared";
+import { AddToCookList, BaseError, CookListData, DatabaseError, FetchError, FetchTarget, IsOnCookList, MAX_PAGE_SIZE, PAGE_SIZE, RecipeDeletion, RemoveFromCookList, ServiceMeta } from "../../shared";
 import { CookListResponse, Recipe } from "../../types";
 
 export default class CookListService extends Service {
@@ -74,13 +74,13 @@ export default class CookListService extends Service {
 					params: {
 						recipeID: "string",
 					},
-					handler: async (ctx: Context<RecipeDeletionParams, ServiceMeta>): Promise<void> => this["recipe.deletion"](ctx),
+					handler: async (ctx: Context<RecipeDeletion, ServiceMeta>): Promise<void> => this["recipe.deletion"](ctx),
 				},
 			},
 		}, schema));
 	}
 
-	public async "recipe.deletion"(ctx: Context<RecipeDeletionParams, ServiceMeta>): Promise<void> {
+	public async "recipe.deletion"(ctx: Context<RecipeDeletion, ServiceMeta>): Promise<void> {
 		const userIds = (await ctx.call("v1.cooklist.find", { fields: "userid" }) as CookListData[]).map(e => e.userid);
 		for (const id of userIds) {
 			this.removeFromCookList(ctx, id, ctx.params.recipeID);
