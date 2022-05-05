@@ -2,8 +2,8 @@
 
 import { Context, Service, ServiceBroker} from "moleculer";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
-import { BaseError, ConvertRatingIDtoRating, ConvertRecipe, ConvertRecipes, ConvertTagsToID, ConvertTagsToName, DatabaseError, RatingData, ServiceMeta } from "../../shared";
-import { Units, Recipe, Tag, User, RatingInfo } from "../../types";
+import { BaseError, converter, ConvertRatingIDtoRating, ConvertRecipe, ConvertRecipes, ConvertTagsToID, ConvertTagsToName, DatabaseError, RatingData, ServiceMeta } from "../../shared";
+import { Recipe, Tag, User, RatingInfo } from "../../types";
 
 export default class IDConverterService extends Service {
 	public constructor(public broker: ServiceBroker) {
@@ -19,7 +19,7 @@ export default class IDConverterService extends Service {
 							id: "string",
 							name: "string",
 							description: {type: "string"},
-							ingredients: {type: "array", items: {type: "object", strict: true, props: {name: "string", amount: "number", unit: { type: "enum", values: Object.values(Units) }}}},
+							ingredients: {type: "array", items: {type: "object", strict: true, props: {name: "string", amount: "number", unit: { type: "enum", values: converter().possibilities() }}}},
 							steps: {type: "array", items: "string"},
 							rating: {type: "string"},
 							tags: {type: "array", items: "string"},
@@ -36,7 +36,7 @@ export default class IDConverterService extends Service {
 							id: "string",
 							name: "string",
 							description: {type: "string"},
-							ingredients: {type: "array", items: {type: "object", strict: true, props: {name: "string", amount: "number", unit: { type: "enum", values: Object.values(Units) }}}},
+							ingredients: {type: "array", items: {type: "object", strict: true, props: {name: "string", amount: "number", unit: { type: "enum", values: converter().possibilities() }}}},
 							steps: {type: "array", items: "string"},
 							rating: {type: "string"},
 							tags: {type: "array", items: "string"},

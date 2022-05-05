@@ -3,8 +3,7 @@
 import {Context, Service, ServiceBroker} from "moleculer";
 import Connection from "../../mixins/db.mixin";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
-import { FirstRating, MAX_PAGE_SIZE, PAGE_SIZE, RecipeData, RecipeDeletion, RecipePictureUpdate } from "../../shared";
-import { Units } from "../../types";
+import { converter, FirstRating, MAX_PAGE_SIZE, PAGE_SIZE, RecipeData, RecipeDeletion, RecipePictureUpdate } from "../../shared";
 export default class DataStoreService extends Service {
 	private DBConnection = new Connection("recipes").start();
 
@@ -35,7 +34,7 @@ export default class DataStoreService extends Service {
 				entityValidator: {
 					name: "string",
 					description: {type: "string", default: "", optional: true},
-					ingredients: {type: "array", items: {type: "object", strict: true, props: {name: "string", amount: "number", unit: { type: "enum", values: Object.values(Units) }}}},
+					ingredients: {type: "array", items: {type: "object", strict: true, props: {name: "string", amount: "number", unit: { type: "enum", values: converter().possibilities() }}}},
 					steps: {type: "array", items: "string"},
 					rating: { type: "string", default: "", optional: true },
 					tags: {type: "array", items: "string"},

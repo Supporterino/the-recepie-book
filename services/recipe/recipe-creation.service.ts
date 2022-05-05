@@ -2,8 +2,8 @@
 
 import {Context, Service, ServiceBroker} from "moleculer";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
-import { BaseError, RecipeData, ServiceMeta } from "../../shared";
-import { CreationData, CreationResponse, Units } from "../../types";
+import { BaseError, converter, RecipeData, ServiceMeta } from "../../shared";
+import { CreationData, CreationResponse } from "../../types";
 
 export default class RecipeCreationService extends Service {
 
@@ -22,7 +22,7 @@ export default class RecipeCreationService extends Service {
 					params: {
 						name: "string",
 						description: {type: "string", default: "", optional: true},
-						ingredients: {type: "array", items: {type: "object", strict: true, props: {name: "string", amount: "number", unit: { type: "enum", values: Object.values(Units) }}}},
+						ingredients: {type: "array", items: {type: "object", strict: true, props: {name: "string", amount: "number", unit: { type: "enum", values: converter().possibilities() }}}},
 						steps: {type: "array", items: "string"},
 						tags: {type: "array", items: "string"},
 					},
