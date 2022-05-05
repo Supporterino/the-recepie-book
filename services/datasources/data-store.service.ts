@@ -34,7 +34,7 @@ export default class DataStoreService extends Service {
 				entityValidator: {
 					name: "string",
 					description: {type: "string", default: "", optional: true},
-					ingredients: {type: "array", items: {type: "object", strict: true, props: {name: "string", amount: "number", unit: { type: "enum", values: converter().possibilities() }}}},
+					ingredients: {type: "object", strict: true, props: {numServings: "number", items: {type: "array", items: {type: "object", strict: true, props: {name: "string", amount: "number", unit: { type: "enum", values: converter().possibilities() }}}}}},
 					steps: {type: "array", items: "string"},
 					rating: { type: "string", default: "", optional: true },
 					tags: {type: "array", items: "string"},

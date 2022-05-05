@@ -22,7 +22,7 @@ export default class RecipeUpdaterService extends Service {
 						id: "string",
 						name: {type: "string", optional: true},
 						description: {type: "string", optional: true},
-						ingredients: {type: "array", items: {type: "object", strict: true, props: {name: "string", amount: "number", unit: { type: "enum", values: converter().possibilities() }}}, optional: true},
+						ingredients: {type: "object", strict: true, props: {numServings: "number", items: {type: "array", items: {type: "object", strict: true, props: {name: "string", amount: "number", unit: { type: "enum", values: converter().possibilities() }}}, optional: true}}},
 						steps: {type: "array", items: "string", optional: true},
 						tags: {type: "array", items: "string", optional: true},
 					},
