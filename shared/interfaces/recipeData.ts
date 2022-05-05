@@ -1,10 +1,10 @@
-import { Ingredient } from "../../types";
+import { Ingredients } from "../../types";
 
 export interface RecipeData {
 	id?: string;
 	name: string;
 	description: string;
-	ingredients: Ingredient[];
+	ingredients: Ingredients;
 	steps: string[];
 	tags: string[];
 	rating?: string;
