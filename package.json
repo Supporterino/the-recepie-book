@@ -1,7 +1,7 @@
 {
   "name": "the-recipe-book",
-  "version": "1.0.0",
-  "description": "My Moleculer-based microservices project",
+  "version": "0.1.1",
+  "description": "Microservice backend for the-recepie-book",
   "scripts": {
     "build": "tsc --build tsconfig.json",
     "dev": "ts-node ./node_modules/moleculer/bin/moleculer-runner.js --hot --repl --config moleculer.config.ts services/**/*.service.ts",
