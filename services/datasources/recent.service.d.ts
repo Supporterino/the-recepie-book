@@ -1,5 +1,5 @@
 import { Context, Service, ServiceBroker, ServiceSchema } from "moleculer";
-import { AddRecent, ServiceMeta } from "../../shared";
+import { AddRecent, RecipeDeletion, ServiceMeta } from "../../shared";
 import { Recipe } from "../../types";
 
 declare class RecentService extends Service {
@@ -19,6 +19,12 @@ declare class RecentService extends Service {
 	 * @event
 	 */
 	public addRecent(ctx: Context<AddRecent>): Promise<void>;
+	/**
+	 * Handles a deletion event by deleting the recipe from the affected users recents.
+	 *
+	 * @event
+	 */
+	public "recipe.deletion"(ctx: Context<RecipeDeletion, ServiceMeta>): Promise<void>;
 }
 
 export = RecentService;
