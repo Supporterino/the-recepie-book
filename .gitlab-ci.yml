@@ -15,7 +15,7 @@ build_release:
   - docker build -t supporterino/the-recepie-book:$CI_COMMIT_SHORT_SHA .
   - docker push supporterino/the-recepie-book
   rules:
-    - if: $CI_COMMIT_BRANCH == "release"
+    - if: $CI_COMMIT_BRANCH == "release" && $CI_PIPELINE_SOURCE != "merge_request_event"
 
 build_main:
   image: docker:stable
@@ -33,7 +33,7 @@ build_main:
   - docker build -t supporterino/the-recepie-book:dev .
   - docker push supporterino/the-recepie-book
   rules:
-    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE != "merge_request_event"
 
 build_branches:
   image: docker:stable
@@ -51,4 +51,23 @@ build_branches:
   - docker build -t supporterino/the-recepie-book:$CI_COMMIT_BRANCH .
   - docker push supporterino/the-recepie-book
   rules:
-    - if: $CI_COMMIT_BRANCH != "release" && $CI_COMMIT_BRANCH != "main"
+    - if: $CI_COMMIT_BRANCH != "release" && $CI_COMMIT_BRANCH != "main" && $CI_PIPELINE_SOURCE != "merge_request_event"
+
+build_merge_event:
+  image: docker:stable
+  variables:
+    DOCKER_HOST: tcp://docker:2375/
+    DOCKER_DRIVER: overlay2
+    DOCKER_TLS_CERTDIR: ''
+    GIT_SUBMODULE_STRATEGY: recursive
+  services:
+  - name: docker:dind
+    alias: docker
+  stage: deploy
+  script:
+  - export REACT_APP_API_URL='https://trb-dev.supporterino.de/'
+  - echo $DOCKER_PW | docker login --username supporterino --password-stdin
+  - docker build -t supporterino/the-recepie-book:$CI_MERGE_REQUEST_IID .
+  - docker push supporterino/the-recepie-book
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
