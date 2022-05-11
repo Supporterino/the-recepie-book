@@ -3,7 +3,7 @@
 import {Context, Service, ServiceBroker, ServiceSchema} from "moleculer";
 import Connection from "../../mixins/db.mixin";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
-import { AddRecent, BaseError, DatabaseError, FetchError, FetchTarget, MAX_PAGE_SIZE, PAGE_SIZE, RecentData, RECENTS_SIZE, ServiceMeta } from "../../shared";
+import { AddRecent, BaseError, DatabaseError, FetchError, FetchTarget, MAX_PAGE_SIZE, PAGE_SIZE, RecentData, RECENTS_SIZE, RecipeDeletion, ServiceMeta } from "../../shared";
 import { Recipe } from "../../types";
 
 export default class RecentService extends Service {
@@ -47,8 +47,21 @@ export default class RecentService extends Service {
 					},
 					handler: async (ctx: Context<AddRecent>) => this.addRecent(ctx),
 				},
+				"recipe.deletion": {
+					params: {
+						recipeID: "string",
+					},
+					handler: async (ctx: Context<RecipeDeletion, ServiceMeta>) => this["recipe.deletion"](ctx),
+				},
 			},
 		}, schema));
+	}
+
+	public async "recipe.deletion"(ctx: Context<RecipeDeletion, ServiceMeta>): Promise<void> {
+		const userIds = (await ctx.call("v1.recent.find", { fields: "userid" }) as RecentData[]).map(e => e.userid);
+		for (const id of userIds) {
+			this.removeRecent(ctx, id, ctx.params.recipeID);
+		}
 	}
 
 	public async getRecents(ctx: Context<null, ServiceMeta>): Promise<Recipe[]> {
@@ -63,7 +76,7 @@ export default class RecentService extends Service {
 			} catch (error) {
 				if (error instanceof BaseError) {throw error;}
 				else {
-					throw new FetchError(error.message || "Failed to load favorited recipes by ID", error.code || 500, FetchTarget.RECIPE_PROVIDER);
+					throw new FetchError(error.message || "Failed to load recent recipes by ID", error.code || 500, FetchTarget.RECIPE_PROVIDER);
 				}
 			}
 		}
@@ -93,6 +106,21 @@ export default class RecentService extends Service {
 			} catch (error) {
 				throw new DatabaseError(error.message || "Creation of RecentData failed.", error.code || 500, this.name);
 			}
+		}
+	}
+
+	private async removeRecent(ctx: Context, userID: string, recipeID: string): Promise<void> {
+		const recentsOfUser = await this.getRecentData(userID, ctx);
+		const index = recentsOfUser.recents.indexOf(recipeID);
+		if (index === -1) {
+			this.logger.warn(`User[${userID}] Can't remove non present recipe: ${recipeID}`);
+		}
+		recentsOfUser.recents.splice(index, 1);
+		try {
+			this.logger.info(`User[${userID}] Removing recipe: ${recipeID}`);
+			await ctx.call("v1.recent.update", { id: recentsOfUser.id, recents: recentsOfUser.recents });
+		} catch (error) {
+			throw new DatabaseError(error.message || "Updating of recent data failed (update call).", error.code || 500, this.name);
 		}
 	}
 
