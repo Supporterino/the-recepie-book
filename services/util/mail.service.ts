@@ -9,7 +9,7 @@ export default class MailService extends Service {
 	private transporter = createTransport({
 		host: "smtp.strato.de",
 		port: 587,
-		secure: true,
+		secure: false,
 		auth: {
 			user: process.env.SMTP_USER,
 			pass: process.env.SMTP_PASS,
@@ -36,11 +36,13 @@ export default class MailService extends Service {
 	}
 
 	public sendMail(ctx: Context<SendMail>) {
+		const [ to, subject, text ] = [ ctx.params.to,ctx.params.subject,ctx.params.text ];
+		this.logger.info(`[Mailer] Sending mail to <${to}> with subject: ${subject}`);
 		this.transporter.sendMail({
 			from: '"The recepie book" <no-reply@supporterino.de>',
-			to: ctx.params.to,
-			subject: ctx.params.subject,
-			text: ctx.params.text,
+			to,
+			subject,
+			text,
 		});
 	}
 }
