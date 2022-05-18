@@ -1,6 +1,6 @@
 {
   "name": "the-recipe-book",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Microservice backend for the-recepie-book",
   "scripts": {
     "build": "tsc --build tsconfig.json",
