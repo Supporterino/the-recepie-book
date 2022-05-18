@@ -6,7 +6,7 @@ import { sign } from "jsonwebtoken";
 import { Context, Errors, Service, ServiceBroker} from "moleculer";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
 import { Authenticate, DatabaseError, LoginServiceResponse, RefreshToken, RefreshTokenData, RevokeToken, ServiceMeta, toMilliseconds, UnitType, UserData } from "../../shared";
-import { Auth } from "../../types";
+import { Auth, User } from "../../types";
 
 export default class LoginService extends Service {
 	private JWT_SECRET: string = process.env.JWT_SECRET;
@@ -43,7 +43,7 @@ export default class LoginService extends Service {
 
 	public async authenticate(ctx: Context<Authenticate>): Promise<LoginServiceResponse> {
 		const [email, password] = [ctx.params.email, ctx.params.password];
-		const user = await this.getUser(email, ctx);
+		const user = await ctx.call("v1.user.getUserByEmail", {email}) as UserData;
 
 		if ( !user || !compareSync(password, user.password)) {throw new Errors.MoleculerError("Invalid Credentials", 400);}
 
@@ -85,7 +85,7 @@ export default class LoginService extends Service {
 
 	private generateToken(user: UserData): string {
 		this.logger.info(`Generating token for ${user.email}`);
-		return sign({ id:user.id, email: user.email } as Auth, this.JWT_SECRET, { expiresIn: "15m" });
+		return sign({ id:user.id, email: user.email, role: user.role, ...(user.verificationID && { verification: user.verificationID }) } as Auth, this.JWT_SECRET, { expiresIn: "15m" });
 	}
 
 	private async generateRefreshToken(user: UserData, ctx: Context<any>): Promise<RefreshTokenData> {
@@ -98,16 +98,6 @@ export default class LoginService extends Service {
 
 	private randomTokenString(): string {
 		return randomBytes(40).toString("hex");
-	}
-
-	private async getUser(email: string, ctx: Context<any>): Promise<UserData> {
-		this.logger.info(`Loading user data for user: ${email}`);
-		try {
-			const user = (await ctx.call("v1.user.find", { query: { email } }) as UserData[])[0];
-			return user;
-		} catch (error) {
-			throw new DatabaseError(error.message || "Couldn't load user via its email address.", error.code || 500, "user");
-		}
 	}
 
 	private async getUserByID(id: string, ctx: Context<any>): Promise<UserData> {
