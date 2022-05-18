@@ -1,6 +1,5 @@
 "use strict";
 
-import { stringify } from "querystring";
 import {Context, Errors, Service, ServiceBroker, ServiceSchema} from "moleculer";
 import Connection from "../../mixins/db.mixin";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
