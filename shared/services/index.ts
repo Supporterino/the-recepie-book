@@ -14,3 +14,4 @@ export * from "./token.types";
 export * from "./login.types";
 export * from "./auth.types";
 export * from "./mail.types";
+export * from "./verification.types";

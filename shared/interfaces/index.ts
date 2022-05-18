@@ -8,3 +8,4 @@ export * from "./recentData";
 export * from "./refreshTokenData";
 export * from "./loginServiceResponse";
 export * from "./userData";
+export * from "./verificationData";
