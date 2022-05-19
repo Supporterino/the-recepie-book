@@ -5,7 +5,7 @@ import { hash } from "bcrypt";
 import {Context, Errors, Service, ServiceBroker} from "moleculer";
 import Connection from "../../mixins/db.mixin";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
-import { CompletePasswordReset, CompleteVerification, MAX_PAGE_SIZE, PAGE_SIZE, ServiceMeta, StartPasswordReset, UserData, VerificationData } from "../../shared";
+import { BASE_URL, CompletePasswordReset, CompleteVerification, MAX_PAGE_SIZE, PAGE_SIZE, ServiceMeta, StartPasswordReset, UserData, VerificationData } from "../../shared";
 
 export default class VerificationService extends Service {
 	private DBConnection = new Connection("verifications").start();
@@ -135,7 +135,7 @@ export default class VerificationService extends Service {
 		ctx.call("v1.mail.sendMail", {
 			to: ctx.meta.user.email,
 			subject: "E-Mail Verification",
-			text: `Press this link to verify your email address: https://trb.supporterino.de/api/v1/verification/completeVerification?a=${data.id}&b=${data.verificationToken}`,
+			text: `Press this link to verify your email address: ${BASE_URL}/api/v1/verification/completeVerification?a=${data.id}&b=${data.verificationToken}`,
 		});
 	}
 
