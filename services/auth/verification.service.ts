@@ -99,6 +99,7 @@ export default class VerificationService extends Service {
 	public async startPasswordReset(ctx: Context<StartPasswordReset>): Promise<void> {
 		const email = ctx.params.email;
 		const user = await ctx.call("v1.user.getUserByEmail", { email }) as UserData;
+		if (!user) {throw new Errors.MoleculerError("No account with this email found.", 404);}
 		const id = user.verificationID;
 		if (!id) {throw new Errors.MoleculerError("User has no verification data. Please verify your email first.", 405);}
 		const data = await ctx.call("v1.verification.get", { id }) as VerificationData;
