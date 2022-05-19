@@ -26,19 +26,15 @@ export default class VerificationService extends Service {
 					"id",
 					"verified",
 					"verificationStarted",
-					"verificationSuccess",
 					"verificationToken",
 					"passwordResetStarted",
-					"lastPasswordReset",
 					"passwordResetToken",
 				],
 				entityValidator: {
 					id: "string",
 					verified: { type: "boolean", optional: true },
 					verificationStarted: { type: "date", convert: true, optional: true },
-					verificationSuccess: { type: "date", convert: true, optional: true },
 					passwordResetStarted: { type: "date", convert: true, optional: true },
-					lastPasswordReset: { type: "date", convert: true, optional: true },
 					verificationToken: { type: "string", optional: true },
 					passwordResetToken: { type: "string", optional: true },
 				},
@@ -95,9 +91,9 @@ export default class VerificationService extends Service {
 		if (!id) {throw new Errors.MoleculerError("User has no verification data.", 500);}
 		const data = await ctx.call("v1.verification.get", { id }) as VerificationData;
 		if (!data) {throw new Errors.MoleculerError("Failed to fetch VerificationData", 500);}
-		if (data.passwordResetToken !== token) {throw new Errors.MoleculerError("Tokens do not match.", 401);}
+		if (data.passwordResetToken !== token) {throw new Errors.MoleculerError("Tokens do not match.", 406);}
 		await ctx.call("v1.user.update", { id: userID, password: hash(newPassword, this.SALT_ROUNDS) });
-		ctx.call("v1.verfication.update", { id, passwordResetToken: null, lastPasswordReset: new Date() });
+		ctx.call("v1.verfication.update", { id, passwordResetToken: null });
 	}
 
 	public async startPasswordReset(ctx: Context<StartPasswordReset>): Promise<void> {
@@ -122,7 +118,7 @@ export default class VerificationService extends Service {
 		const data = await ctx.call("v1.verification.get", { id }) as VerificationData;
 		if (!data) {throw new Errors.MoleculerError("No matching verfication request found", 404);}
 		if (data.verificationToken !== token) {throw new Errors.MoleculerError("Tokens do not match!", 401);}
-		ctx.call("v1.verfication.update", { id, verificationSuccess: new Date(), verified: true, verificationToken: null });
+		ctx.call("v1.verfication.update", { id, verified: true, verificationToken: null });
 	}
 
 	public async startEmailVerification(ctx: Context<null, ServiceMeta>): Promise<void> {
@@ -144,7 +140,7 @@ export default class VerificationService extends Service {
 	}
 
 	private async createNewVerificationData(ctx: Context<null, ServiceMeta>): Promise<string> {
-		const data = await ctx.call("v1.verification.create", { verified: false, passwordResetInProgress: false }) as VerificationData;
+		const data = await ctx.call("v1.verification.create", { verified: false }) as VerificationData;
 		ctx.emit("user.setVerificationData", { userID: ctx.meta.user.id, verficationID: data.id });
 		return data.id;
 	}
