@@ -1,6 +1,6 @@
 export interface CompleteVerification {
-	a: string;
-	b: string;
+	userID: string;
+	token: string;
 }
 
 export interface StartPasswordReset {
