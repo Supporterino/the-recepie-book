@@ -85,26 +85,38 @@ export default class VerificationService extends Service {
 
 	public async completePasswordReset(ctx: Context<CompletePasswordReset>): Promise<void> {
 		const [ userID, token, newPassword ] = [ ctx.params.userID, ctx.params.token, ctx.params.newPassword ];
+		this.logger.info(`[Verification] Completing password reset for user: ${userID} with token: ${token}`);
 		const user = await ctx.call("v1.user.get", { id: userID }) as UserData;
 		const id = user.verificationID;
 		if (!id) {throw new Errors.MoleculerError("User has no verification data.", 500);}
+		this.logger.debug("[Verification] Loading verification data.");
 		const data = await ctx.call("v1.verification.get", { id }) as VerificationData;
 		if (!data) {throw new Errors.MoleculerError("Failed to fetch VerificationData", 500);}
 		if (data.passwordResetToken !== token) {throw new Errors.MoleculerError("Tokens do not match.", 406);}
+		this.logger.debug("[Verification] Setting new user password.");
 		await ctx.call("v1.user.update", { id: userID, password: hash(newPassword, this.SALT_ROUNDS) });
 		ctx.call("v1.verification.update", { id, passwordResetToken: null });
 	}
 
 	public async startPasswordReset(ctx: Context<StartPasswordReset>): Promise<void> {
 		const email = ctx.params.email;
+		this.logger.info(`[Verification] Starting password reset for email: ${email}`);
+		this.logger.debug("[Verification] Getting user by email.");
 		const user = await ctx.call("v1.user.getUserByEmail", { email }) as UserData;
 		if (!user) {throw new Errors.MoleculerError("No account with this email found.", 404);}
 		const id = user.verificationID;
-		if (!id) {throw new Errors.MoleculerError("User has no verification data. Please verify your email first.", 405);}
+		if (!id) {
+			this.logger.warn("[Verification] User has no VerificationData.");
+			throw new Errors.MoleculerError("User has no verification data. Please verify your email first.", 405);
+		}
 		const data = await ctx.call("v1.verification.get", { id }) as VerificationData;
 		if (!data) {throw new Errors.MoleculerError("Failed to fetch VerificationData", 500);}
-		if (!data.verified) {throw new Errors.MoleculerError("User's email isn't verified. Please verify your email first.", 405);}
+		if (!data.verified) {
+			this.logger.warn("[Verification] User hans't verified its email yet");
+			throw new Errors.MoleculerError("User's email isn't verified. Please verify your email first.", 405);
+		}
 		const token = this.genToken();
+		this.logger.info("[Verification] Sending password reset link to user.");
 		ctx.call("v1.mail.sendMail", {
 			to: email,
 			subject: "Password Reset",
@@ -115,24 +127,35 @@ export default class VerificationService extends Service {
 
 	public async completeVerification(ctx: Context<CompleteVerification, any>): Promise<void> {
 		const [ id, token ] = [ ctx.params.userID, ctx.params.token ];
+		this.logger.info(`[Verification] Completing email verification for VerificationData: ${id}`);
 		const data = await ctx.call("v1.verification.get", { id }) as VerificationData;
-		if (!data) {throw new Errors.MoleculerError("No matching verfication request found", 404);}
-		if (data.verificationToken !== token) {throw new Errors.MoleculerError("Tokens do not match!", 406);}
+		if (!data) {
+			this.logger.warn("[Verification] No data for provided ID.");
+			throw new Errors.MoleculerError("No matching verfication request found", 404);
+		}
+		if (data.verificationToken !== token) {
+			this.logger.warn("[Verification] Tokens do not match!");
+			throw new Errors.MoleculerError("Tokens do not match!", 406);
+		}
+		this.logger.debug("[Verification] Setting Data to verified.");
 		ctx.call("v1.verification.update", { id, verified: true, verificationToken: null });
 	}
 
 	public async startEmailVerification(ctx: Context<null, ServiceMeta>): Promise<void> {
 		let id = ctx.meta.user.verification;
+		this.logger.info(`[Verification] Starting email verification for user id: ${id}`);
 		if (!id) {id = await this.createNewVerificationData(ctx);}
 		const data = await ctx.call("v1.verification.get", { id }) as VerificationData;
 		let result: VerificationData;
 		const token = this.genToken();
+		this.logger.debug("[Verification] Setting token in VerificationData.");
 		if (!data) {result = await ctx.call("v1.verification.update", { id, verificationStarted: new Date(), verificationToken: token }) as VerificationData;}
 		else {
 			if (data.verified) {throw new Errors.MoleculerError("User already verified", 406);}
 			if (data.verificationToken) {throw new Errors.MoleculerError("Verification already in progress.", 403);}
 			result = await ctx.call("v1.verification.update", { id, verificationStarted: new Date(), verificationToken: token }) as VerificationData;
 		}
+		this.logger.info("[Verification] Sending verfication mail to user");
 		ctx.call("v1.mail.sendMail", {
 			to: ctx.meta.user.email,
 			subject: "E-Mail Verification",
@@ -141,6 +164,7 @@ export default class VerificationService extends Service {
 	}
 
 	private async createNewVerificationData(ctx: Context<null, ServiceMeta>): Promise<string> {
+		this.logger.info("[Verification] Creating new VerificationData payload.");
 		const data = await ctx.call("v1.verification.create", { verified: false }) as VerificationData;
 		ctx.emit("user.setVerificationData", { userID: ctx.meta.user.id, verficationID: data.id });
 		return data.id;
