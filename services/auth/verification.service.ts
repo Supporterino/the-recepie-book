@@ -5,7 +5,7 @@ import { hash } from "bcrypt";
 import {Context, Errors, Service, ServiceBroker} from "moleculer";
 import Connection from "../../mixins/db.mixin";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
-import { BASE_URL, CompletePasswordReset, CompleteVerification, MAX_PAGE_SIZE, PAGE_SIZE, ServiceMeta, StartPasswordReset, UserData, VerificationData } from "../../shared";
+import {  CompletePasswordReset, CompleteVerification, FRONTEND_URL, MAX_PAGE_SIZE, PAGE_SIZE, ServiceMeta, StartPasswordReset, UserData, VerificationData } from "../../shared";
 
 export default class VerificationService extends Service {
 	private DBConnection = new Connection("verifications").start();
@@ -31,8 +31,7 @@ export default class VerificationService extends Service {
 					"passwordResetToken",
 				],
 				entityValidator: {
-					id: "string",
-					verified: { type: "boolean", optional: true },
+					verified: { type: "boolean" },
 					verificationStarted: { type: "date", convert: true, optional: true },
 					passwordResetStarted: { type: "date", convert: true, optional: true },
 					verificationToken: { type: "string", optional: true },
@@ -49,14 +48,14 @@ export default class VerificationService extends Service {
 				},
 				completeVerification: {
 					rest: {
-						path: "/completeVerification?:a&:b",
-						method: "GET",
+						path: "/completeVerification",
+						method: "POST",
 					},
 					params: {
-						a: "string",
-						b: "string",
+						userID: "string",
+						token: "string",
 					},
-					handler: (ctx: Context<CompleteVerification>) => this.completeVerification(ctx),
+					handler: (ctx: Context<CompleteVerification, any>) => this.completeVerification(ctx),
 				},
 				startPasswordReset: {
 					rest: {
@@ -93,7 +92,7 @@ export default class VerificationService extends Service {
 		if (!data) {throw new Errors.MoleculerError("Failed to fetch VerificationData", 500);}
 		if (data.passwordResetToken !== token) {throw new Errors.MoleculerError("Tokens do not match.", 406);}
 		await ctx.call("v1.user.update", { id: userID, password: hash(newPassword, this.SALT_ROUNDS) });
-		ctx.call("v1.verfication.update", { id, passwordResetToken: null });
+		ctx.call("v1.verification.update", { id, passwordResetToken: null });
 	}
 
 	public async startPasswordReset(ctx: Context<StartPasswordReset>): Promise<void> {
@@ -109,17 +108,17 @@ export default class VerificationService extends Service {
 		ctx.call("v1.mail.sendMail", {
 			to: email,
 			subject: "Password Reset",
-			text: `Press this link to continue your password reset: https://recepie.supporterino.de/passwordReset?id=${user.email}&token=${token}`,
+			text: `Press this link to continue your password reset: ${FRONTEND_URL}passwordReset?id=${user.email}&token=${token}`,
 		});
-		ctx.call("v1.verfication.update", { id, passwordResetStarted: new Date(), passwordResetToken: token });
+		ctx.call("v1.verification.update", { id, passwordResetStarted: new Date(), passwordResetToken: token });
 	}
 
-	public async completeVerification(ctx: Context<CompleteVerification>): Promise<void> {
-		const [ id, token ] = [ ctx.params.a, ctx.params.b ];
+	public async completeVerification(ctx: Context<CompleteVerification, any>): Promise<void> {
+		const [ id, token ] = [ ctx.params.userID, ctx.params.token ];
 		const data = await ctx.call("v1.verification.get", { id }) as VerificationData;
 		if (!data) {throw new Errors.MoleculerError("No matching verfication request found", 404);}
-		if (data.verificationToken !== token) {throw new Errors.MoleculerError("Tokens do not match!", 401);}
-		ctx.call("v1.verfication.update", { id, verified: true, verificationToken: null });
+		if (data.verificationToken !== token) {throw new Errors.MoleculerError("Tokens do not match!", 406);}
+		ctx.call("v1.verification.update", { id, verified: true, verificationToken: null });
 	}
 
 	public async startEmailVerification(ctx: Context<null, ServiceMeta>): Promise<void> {
@@ -127,16 +126,17 @@ export default class VerificationService extends Service {
 		if (!id) {id = await this.createNewVerificationData(ctx);}
 		const data = await ctx.call("v1.verification.get", { id }) as VerificationData;
 		let result: VerificationData;
-		if (!data) {result = await ctx.call("v1.verification.update", { id, verificationStarted: new Date(), verificationToken: this.genToken() }) as VerificationData;}
+		const token = this.genToken();
+		if (!data) {result = await ctx.call("v1.verification.update", { id, verificationStarted: new Date(), verificationToken: token }) as VerificationData;}
 		else {
 			if (data.verified) {throw new Errors.MoleculerError("User already verified", 406);}
 			if (data.verificationToken) {throw new Errors.MoleculerError("Verification already in progress.", 403);}
-			result = await ctx.call("v1.verification.update", { id, verificationStarted: new Date(), verificationToken: this.genToken() }) as VerificationData;
+			result = await ctx.call("v1.verification.update", { id, verificationStarted: new Date(), verificationToken: token }) as VerificationData;
 		}
 		ctx.call("v1.mail.sendMail", {
 			to: ctx.meta.user.email,
 			subject: "E-Mail Verification",
-			text: `Press this link to verify your email address: ${BASE_URL}/api/v1/verification/completeVerification?a=${data.id}&b=${data.verificationToken}`,
+			text: `Press this link to verify your email address: ${FRONTEND_URL}completeVerification?userID=${data.id}&token=${token}`,
 		});
 	}
 
