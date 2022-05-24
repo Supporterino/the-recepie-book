@@ -12,3 +12,8 @@ export interface CompletePasswordReset {
 	token: string;
 	newPassword: string;
 }
+
+export interface RegistrationTrigger {
+	userID: string;
+	email: string;
+}

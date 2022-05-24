@@ -95,7 +95,8 @@ export default class AuthService extends Service {
 		} as UserData;
 		try {
 			this.logger.info(`Creating new account(${user.username}) for email: ${user.email}`);
-			await ctx.call("v1.user.create", user);
+			const createdUser = await ctx.call("v1.user.create", user) as UserData;
+			ctx.emit("verification.triggerStart", { userID: createdUser.id, email: createdUser.email });
 			return `User[${user.username}] created.`;
 		} catch (error) {
 			throw new DatabaseError(error.message || "Creation of user failed.", error.code || 500, "user");

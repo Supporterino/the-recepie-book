@@ -5,7 +5,7 @@ import { hash } from "bcrypt";
 import {Context, Errors, Service, ServiceBroker} from "moleculer";
 import Connection from "../../mixins/db.mixin";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
-import {  CompletePasswordReset, CompleteVerification, FRONTEND_URL, MAX_PAGE_SIZE, PAGE_SIZE, ServiceMeta, StartPasswordReset, UserData, VerificationData } from "../../shared";
+import {  CompletePasswordReset, CompleteVerification, FRONTEND_URL, MAX_PAGE_SIZE, PAGE_SIZE, RegistrationTrigger, ServiceMeta, StartPasswordReset, UserData, VerificationData } from "../../shared";
 
 export default class VerificationService extends Service {
 	private DBConnection = new Connection("verifications").start();
@@ -80,7 +80,31 @@ export default class VerificationService extends Service {
 					handler: (ctx: Context<CompletePasswordReset>) => this.completePasswordReset(ctx),
 				},
 			},
+			events: {
+				"verification.triggerStart": {
+					params: {
+						userID: "string",
+						email: "string",
+					},
+					handler: async (ctx: Context<RegistrationTrigger>) => this["verification.triggerStart"](ctx),
+				},
+			},
 		}, schema));
+	}
+
+	public async "verification.triggerStart"(ctx: Context<RegistrationTrigger>) {
+		this.logger.info("[Verification] Creating new VerificationData payload.");
+		const data = await ctx.call("v1.verification.create", { verified: false }) as VerificationData;
+		ctx.emit("user.setVerificationData", { userID: ctx.params.userID, verificationID: data.id });
+		const token = this.genToken();
+		this.logger.debug("[Verification] Setting token in VerificationData.");
+		await ctx.call("v1.verification.update", { id: data.id, verificationStarted: new Date(), verificationToken: token });
+		this.logger.info("[Verification] Sending verfication mail to user");
+		ctx.call("v1.mail.sendMail", {
+			to: ctx.params.email,
+			subject: "E-Mail Verification",
+			text: `Press this link to verify your email address: ${FRONTEND_URL}completeVerification?userID=${data.id}&token=${token}`,
+		});
 	}
 
 	public async completePasswordReset(ctx: Context<CompletePasswordReset>): Promise<void> {
