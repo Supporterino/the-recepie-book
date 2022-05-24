@@ -1,5 +1,6 @@
 "use strict";
 
+import { kMaxLength } from "buffer";
 import { Context, Service, ServiceBroker} from "moleculer";
 import { createTransport } from "nodemailer";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
@@ -8,8 +9,8 @@ import { SendMail } from "../../shared";
 export default class MailService extends Service {
 	private transporter = createTransport({
 		host: "smtp.strato.de",
-		port: 587,
-		secure: false,
+		port: 465,
+		secure: true,
 		auth: {
 			user: process.env.SMTP_USER,
 			pass: process.env.SMTP_PASS,
