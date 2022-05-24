@@ -94,7 +94,7 @@ export default class VerificationService extends Service {
 		if (!data) {throw new Errors.MoleculerError("Failed to fetch VerificationData", 500);}
 		if (data.passwordResetToken !== token) {throw new Errors.MoleculerError("Tokens do not match.", 406);}
 		this.logger.debug("[Verification] Setting new user password.");
-		await ctx.call("v1.user.update", { id: userID, password: hash(newPassword, this.SALT_ROUNDS) });
+		await ctx.call("v1.user.update", { id: userID, password: await hash(newPassword, this.SALT_ROUNDS) });
 		ctx.call("v1.verification.update", { id, passwordResetToken: null });
 	}
 
@@ -120,7 +120,7 @@ export default class VerificationService extends Service {
 		ctx.call("v1.mail.sendMail", {
 			to: email,
 			subject: "Password Reset",
-			text: `Press this link to continue your password reset: ${FRONTEND_URL}passwordReset?id=${user.email}&token=${token}`,
+			text: `Press this link to continue your password reset: ${FRONTEND_URL}passwordReset?id=${user.id}&token=${token}`,
 		});
 		ctx.call("v1.verification.update", { id, passwordResetStarted: new Date(), passwordResetToken: token });
 	}
@@ -166,7 +166,7 @@ export default class VerificationService extends Service {
 	private async createNewVerificationData(ctx: Context<null, ServiceMeta>): Promise<string> {
 		this.logger.info("[Verification] Creating new VerificationData payload.");
 		const data = await ctx.call("v1.verification.create", { verified: false }) as VerificationData;
-		ctx.emit("user.setVerificationData", { userID: ctx.meta.user.id, verficationID: data.id });
+		ctx.emit("user.setVerificationData", { userID: ctx.meta.user.id, verificationID: data.id });
 		return data.id;
 	}
 

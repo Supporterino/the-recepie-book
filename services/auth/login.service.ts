@@ -85,7 +85,8 @@ export default class LoginService extends Service {
 
 	private generateToken(user: UserData): string {
 		this.logger.info(`Generating token for ${user.email}`);
-		return sign({ id:user.id, email: user.email, role: user.role, ...(user.verificationID && { verification: user.verificationID }) } as Auth, this.JWT_SECRET, { expiresIn: "15m" });
+		const payload = { id:user.id, email: user.email, role: user.role, ...(user.verificationID !== null && { verification: user.verificationID }) } as Auth;
+		return sign(payload, this.JWT_SECRET, { expiresIn: "15m" });
 	}
 
 	private async generateRefreshToken(user: UserData, ctx: Context<any>): Promise<RefreshTokenData> {

@@ -107,7 +107,7 @@ export default class UserService extends Service {
 				"user.setVerificationData": {
 					params: {
 						userID: "string",
-						verficationID: "string",
+						verificationID: "string",
 					},
 					handler: (ctx: Context<SetVerificationData>) => this["user.setVerificationData"](ctx),
 				},
@@ -115,8 +115,8 @@ export default class UserService extends Service {
 		}, schema));
 	}
 
-	public "user.setVerificationData"(ctx: Context<SetVerificationData>): void {
-		ctx.call("v1.user.update", { id: ctx.params.userID, verificationID: ctx.params.verificationID });
+	public async "user.setVerificationData"(ctx: Context<SetVerificationData>): Promise<void> {
+		await ctx.call("v1.user.update", { id: ctx.params.userID, verificationID: ctx.params.verificationID });
 	}
 
 	public async "user.newAvatar"(ctx: Context<UserAvatarUpdate>): Promise<void> {
