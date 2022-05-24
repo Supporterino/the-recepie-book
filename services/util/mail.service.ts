@@ -1,6 +1,5 @@
 "use strict";
 
-import { kMaxLength } from "buffer";
 import { Context, Service, ServiceBroker} from "moleculer";
 import { createTransport } from "nodemailer";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
