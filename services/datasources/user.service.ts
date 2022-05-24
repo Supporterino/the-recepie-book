@@ -3,7 +3,7 @@
 import {Context, Errors, Service, ServiceBroker, ServiceSchema} from "moleculer";
 import Connection from "../../mixins/db.mixin";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
-import { DatabaseError, GetSanitizedUser, GetUserByEmail, IsLegitUser, MAX_PAGE_SIZE, OwnsRecipe, PAGE_SIZE, RecipeData, Rename, ServiceMeta, SetUserRole, SetVerificationData, UserAvatarUpdate, UserData } from "../../shared";
+import { DatabaseError, GetSanitizedUser, GetUserByEmail, IsLegitUser, MAX_PAGE_SIZE, OwnsRecipe, PAGE_SIZE, RecipeData, Rename, ServiceMeta, SetUserRole, SetVerificationData, UserAvatarUpdate, UserData, VerificationData } from "../../shared";
 import { Role, User } from "../../types";
 
 export default class UserService extends Service {
@@ -165,6 +165,7 @@ export default class UserService extends Service {
 			joinedAt: user.joinedAt,
 			avatar: (user.avatar !== "NO_PIC") ? await ctx.call("v1.photo.getImageUrl", { filename: user.avatar }) : "",
 			role: user.role,
+			verified: user.verificationID ? (await ctx.call("v1.verification.get", { id: user.verificationID }) as VerificationData).verified : false,
 		} as User;
 	}
 
