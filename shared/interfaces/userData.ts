@@ -8,4 +8,5 @@ export interface UserData {
 	joinedAt: Date;
 	avatar: string;
 	role: Role;
+	verificationID?: string;
 }

@@ -26,3 +26,12 @@ export interface SetUserRole {
 	userID: string;
 	role: Role;
 }
+
+export interface SetVerificationData {
+	userID: string;
+	verificationID: string;
+}
+
+export interface GetUserByEmail {
+	email: string;
+}

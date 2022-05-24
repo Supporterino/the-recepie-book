@@ -79,7 +79,7 @@ export default class AuthService extends Service {
 	public async register(ctx: Context<Register>): Promise<string> {
 		const [username, email, password] = [ctx.params.username, ctx.params.email, ctx.params.password];
 		this.logger.info("Checking if user is already registered.", email);
-		const oldUser = await this.getUser(email, ctx);
+		const oldUser = await ctx.call("v1.user.getUserByEmail", {email}) as UserData;
 
 		if (oldUser) {
 			this.logger.warn(`${oldUser.email} has already a registered account.`);
@@ -95,7 +95,8 @@ export default class AuthService extends Service {
 		} as UserData;
 		try {
 			this.logger.info(`Creating new account(${user.username}) for email: ${user.email}`);
-			await ctx.call("v1.user.create", user);
+			const createdUser = await ctx.call("v1.user.create", user) as UserData;
+			ctx.emit("verification.triggerStart", { userID: createdUser.id, email: createdUser.email });
 			return `User[${user.username}] created.`;
 		} catch (error) {
 			throw new DatabaseError(error.message || "Creation of user failed.", error.code || 500, "user");
@@ -137,15 +138,5 @@ export default class AuthService extends Service {
 			refreshToken: loginData.refreshToken,
 			msg: "Login successful",
 		} as LoginResponse;
-	}
-
-	private async getUser(email: string, ctx: Context<any>): Promise<UserData> {
-		this.logger.info(`Loading user data for user: ${email}`);
-		try {
-			const user = (await ctx.call("v1.user.find", { query: { email } }) as UserData[])[0];
-			return user;
-		} catch (error) {
-			throw new DatabaseError(error.message || "Couldn't load user via its email address.", error.code || 500, "user");
-		}
 	}
 }

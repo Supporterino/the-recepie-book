@@ -4,7 +4,7 @@ import { Transform } from "stream";
 import { Context, Service, ServiceBroker} from "moleculer";
 import {v4 as uuidv4} from "uuid";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
-import { BASE_URL, GetImageUrl, GetPhoto, PhotoDeletion, PhotoUploadMeta, PREFIX } from "../../shared";
+import { BACKEND_URL, GetImageUrl, GetPhoto, PhotoDeletion, PhotoUploadMeta, PREFIX } from "../../shared";
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const MongoClient = require("mongodb").MongoClient;
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -34,7 +34,7 @@ export default class PhotoService extends Service {
 					params: {
 						filename: "string",
 					},
-					handler: (ctx: Context<GetImageUrl>): string => `${BASE_URL}${PREFIX}${ctx.params.filename}`,
+					handler: (ctx: Context<GetImageUrl>): string => `${BACKEND_URL}${PREFIX}${ctx.params.filename}`,
 				},
 			},
 			events: {

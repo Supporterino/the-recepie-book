@@ -3,7 +3,7 @@
 import {Context, Errors, Service, ServiceBroker, ServiceSchema} from "moleculer";
 import Connection from "../../mixins/db.mixin";
 import { ErrorMixin } from "../../mixins/error_logging.mixin";
-import { DatabaseError, GetSanitizedUser, IsLegitUser, MAX_PAGE_SIZE, OwnsRecipe, PAGE_SIZE, RecipeData, Rename, ServiceMeta, SetUserRole, UserAvatarUpdate, UserData } from "../../shared";
+import { DatabaseError, GetSanitizedUser, GetUserByEmail, IsLegitUser, MAX_PAGE_SIZE, OwnsRecipe, PAGE_SIZE, RecipeData, Rename, ServiceMeta, SetUserRole, SetVerificationData, UserAvatarUpdate, UserData, VerificationData } from "../../shared";
 import { Role, User } from "../../types";
 
 export default class UserService extends Service {
@@ -28,6 +28,7 @@ export default class UserService extends Service {
 					"joinedAt",
 					"avatar",
 					"role",
+					"verificationID",
 				],
 				entityValidator: {
 					username: "string",
@@ -36,6 +37,7 @@ export default class UserService extends Service {
 					joinedAt: { type: "date", convert: true },
 					avatar: { type: "string", default: "NO_PIC", optional: true },
 					role: { type: "enum", values: Object.values(Role) },
+					verificationID: { type: "string", optional: true },
 				},
 			},
 			actions: {
@@ -87,6 +89,12 @@ export default class UserService extends Service {
 					},
 					handler: async (ctx: Context<SetUserRole, ServiceMeta>): Promise<void> => await this.setUserRole(ctx),
 				},
+				getUserByEmail: {
+					params: {
+						email: "string",
+					},
+					handler: (ctx: Context<GetUserByEmail>): Promise<UserData> => this.getUserByEmail(ctx),
+				},
 			},
 			events: {
 				"user.newAvatar": {
@@ -96,14 +104,36 @@ export default class UserService extends Service {
 					},
 					handler: async (ctx: Context<UserAvatarUpdate>) => this["user.newAvatar"](ctx),
 				},
+				"user.setVerificationData": {
+					params: {
+						userID: "string",
+						verificationID: "string",
+					},
+					handler: (ctx: Context<SetVerificationData>) => this["user.setVerificationData"](ctx),
+				},
 			},
 		}, schema));
+	}
+
+	public async "user.setVerificationData"(ctx: Context<SetVerificationData>): Promise<void> {
+		await ctx.call("v1.user.update", { id: ctx.params.userID, verificationID: ctx.params.verificationID });
 	}
 
 	public async "user.newAvatar"(ctx: Context<UserAvatarUpdate>): Promise<void> {
 		const oldFile = (await ctx.call("v1.user.get", {id: ctx.params.userID}) as UserData).avatar;
 		await ctx.call("v1.user.update", { id: ctx.params.userID, avatar: ctx.params.imageName });
 		if (oldFile !== "NO_PIC") {ctx.emit("photo.delete", { fileName: oldFile });}
+	}
+
+	public async getUserByEmail(ctx: Context<GetUserByEmail>): Promise<UserData> {
+		const email = ctx.params.email;
+		this.logger.info(`Loading user data for user: ${email}`);
+		try {
+			const user = (await ctx.call("v1.user.find", { query: { email } }) as UserData[])[0];
+			return user;
+		} catch (error) {
+			throw new DatabaseError(error.message || "Couldn't load user via its email address.", error.code || 500, "user");
+		}
 	}
 
 	public async setUserRole(ctx: Context<SetUserRole, ServiceMeta>): Promise<void> {
@@ -135,6 +165,7 @@ export default class UserService extends Service {
 			joinedAt: user.joinedAt,
 			avatar: (user.avatar !== "NO_PIC") ? await ctx.call("v1.photo.getImageUrl", { filename: user.avatar }) : "",
 			role: user.role,
+			verified: user.verificationID ? (await ctx.call("v1.verification.get", { id: user.verificationID }) as VerificationData).verified : false,
 		} as User;
 	}
 
